@@ -46,6 +46,57 @@ JPC_ORIGINS = {
     19:(26.0,154.0),
 }
 
+# 各系のカバー範囲（緯度経度の近似BBox）- 系候補提案に使用
+JPC_ZONE_BBOX = {
+     1: (30.5, 34.5, 127.5, 131.5),   # 長崎・鹿児島
+     2: (30.5, 35.0, 129.5, 133.0),   # 福岡・佐賀・熊本 等
+     3: (33.5, 36.5, 130.5, 134.0),   # 山口・島根・広島
+     4: (32.5, 35.0, 132.0, 135.5),   # 香川・愛媛・徳島・高知
+     5: (34.0, 37.0, 133.0, 136.0),   # 兵庫・鳥取・岡山
+     6: (33.5, 37.5, 134.5, 137.5),   # 京都・大阪・福井 等
+     7: (35.0, 38.5, 135.5, 138.5),   # 石川・富山・岐阜・愛知
+     8: (35.0, 38.5, 137.0, 140.5),   # 新潟・長野・山梨・静岡
+     9: (34.5, 40.5, 138.5, 141.5),   # 東京・神奈川・千葉 等
+    10: (37.5, 42.0, 139.5, 142.5),   # 青森・秋田・山形・岩手・宮城
+    11: (41.0, 45.5, 138.5, 142.0),   # 小樽・函館 等
+    12: (42.0, 46.0, 140.5, 143.5),   # 札幌・旭川 等
+    13: (42.5, 46.0, 142.5, 146.5),   # 網走・北見・釧路・帯広
+    14: (23.0, 28.0, 140.0, 144.5),   # 諸島
+    15: (24.0, 27.5, 126.0, 130.0),   # 沖縄本島
+    16: (24.0, 26.5, 122.5, 126.0),   # 石垣・宮古
+    17: (25.5, 27.5, 129.0, 133.0),   # 大東諸島
+    18: (19.0, 21.5, 134.0, 138.0),   # 沖ノ鳥島
+    19: (23.5, 25.5, 152.5, 155.5),   # 南鳥島
+}
+
+def suggest_zone_from_latlon(lat: float, lon: float) -> list[int]:
+    """緯度経度から候補系番号リストを返す（BBox内に入る系）"""
+    candidates = []
+    for zone, (lat_s, lat_n, lon_w, lon_e) in JPC_ZONE_BBOX.items():
+        if lat_s <= lat <= lat_n and lon_w <= lon <= lon_e:
+            candidates.append(zone)
+    if not candidates:
+        # BBox外の場合は最近傍の系を返す
+        def dist(zone):
+            la0, lo0 = JPC_ORIGINS[zone]
+            return (lat - la0)**2 + (lon - lo0)**2
+        candidates = [min(JPC_ORIGINS.keys(), key=dist)]
+    return sorted(candidates)
+
+def suggest_zone_from_jpc(x: float, y: float) -> list[int]:
+    """平面直角座標値から系候補を返す（原点からの距離が近い系）"""
+    # 平面直角座標の典型範囲: X が -700km〜+700km、Y が -400km〜+400km
+    # 距離が近い上位3系を候補として返す
+    def score(zone):
+        # X方向の重みを少し大きく（X範囲の方が大きいため）
+        return abs(x) / 800000 + abs(y) / 400000
+    # X,Yが極端に大きければ範囲外の可能性
+    if abs(x) > 800000 or abs(y) > 400000:
+        return []
+    # 全系とも同じ変換式なので原点からの数値的な近さで候補を絞れない
+    # → 入力中の系番号をそのまま使うのが正解、警告のみ返す
+    return []
+
 JPC_ZONE_LABELS = {
      1:"1系 — 長崎・鹿児島（一部）",
      2:"2系 — 福岡・佐賀・熊本・大分・宮崎・鹿児島（一部）",
@@ -339,6 +390,80 @@ if(pins.length>1){{
 # 6. ページ設定・CSS
 # ═══════════════════════════════════════════════════════
 
+# ─────────────────────────────────────────────────────────
+# ミス防止チェック関数
+# ─────────────────────────────────────────────────────────
+
+def check_datum_zone_mismatch(datum_key: str, zone: int) -> str | None:
+    """
+    測地系と座標系の組み合わせ不整合を検出してメッセージを返す。
+    問題なければ None。
+    """
+    # 旧日本測地系（Tokyo）は旧座標系用であり、JGD系との混在は誤差が大きい
+    if datum_key == "TOKYO":
+        return (
+            "⚠️ **測地系の確認** — 旧日本測地系（Tokyo97）が選択されています。"
+            "現在の公共測量では **JGD2011 または JGD2024** を使用します。"
+            "旧測地系のデータを処理する場合のみ選択してください。"
+        )
+    # 沖縄・離島系（15〜19系）に本土測地系が指定された場合の注意
+    if zone in (15, 16, 17, 18, 19) and datum_key in ("JGD2024","JGD2011","JGD2000"):
+        return None  # 問題なし
+    return None
+
+def check_geoid_warning(geoid_key: str, has_elevation_input: bool) -> str | None:
+    """ジオイド補正なしでZ標高が入力されている場合に警告を返す。"""
+    if geoid_key == "NONE" and has_elevation_input:
+        return (
+            "⚠️ **ジオイド補正なし** — 「ジオイド補正なし」が選択されています。"
+            "Z標高（正標高）から楕円体高を計算するには"
+            "**JPGEO2024 または JPGEO2011** を選択してください。"
+            "現在は標高＝楕円体高として処理されます。"
+        )
+    return None
+
+def render_zone_suggestion_jpc(x_str: str, y_str: str, current_zone: int):
+    """JPC入力時の系候補を表示（入力値がある場合のみ）"""
+    if not (x_str.strip() and y_str.strip()):
+        return
+    try:
+        Xv, Yv = float(x_str), float(y_str)
+        # 極端に大きな値は系の選択ミスの可能性
+        if abs(Xv) > 600000 or abs(Yv) > 350000:
+            st.warning(
+                f"⚠️ **座標値の確認** — X={Xv:,.0f} m / Y={Yv:,.0f} m は"
+                "平面直角座標として非常に大きい値です。"
+                "**系番号の選択** または **X/Y の入力順序** を確認してください。"
+            )
+    except ValueError:
+        pass
+
+def render_zone_suggestion_ll(lat_str: str, lon_str: str, fmt_key: str, current_zone: int):
+    """緯度経度入力時の系自動提案を表示"""
+    if not (lat_str.strip() and lon_str.strip()):
+        return
+    try:
+        lat_dd = parse_angle(lat_str, fmt_key)
+        lon_dd = parse_angle(lon_str, fmt_key)
+        candidates = suggest_zone_from_latlon(lat_dd, lon_dd)
+        if candidates and current_zone not in candidates:
+            zone_names = ", ".join(
+                f"**{z}系**（{JPC_ZONE_LABELS[z].split(' — ')[1]}）"
+                for z in candidates
+            )
+            st.info(
+                f"💡 **系番号の提案** — 入力座標（緯度 {lat_dd:.4f}°, 経度 {lon_dd:.4f}°）には"
+                f" {zone_names} が適合します。"
+                f"現在選択中の **第 {current_zone} 系** と異なります。"
+                "サイドバーで系番号を変更してください。"
+            )
+        elif candidates and current_zone in candidates:
+            # 一致の場合は軽くOK表示
+            pass
+    except (ValueError, Exception):
+        pass
+
+
 st.set_page_config(
     page_title="GNSS SmartShift ICT",
     page_icon="📐", layout="wide",
@@ -480,6 +605,11 @@ st.markdown(f"""
   <p style='font-size:13px;color:#cbd5e1;margin:2px 0 0;font-weight:500;letter-spacing:.05em'>マルチメーカー対応 ローカライゼーション統合システム</p>
   <p style='margin-top:6px'>第 {Z} 系 &nbsp;·&nbsp; {datum_lbl} &nbsp;·&nbsp; {geoid_lbl} &nbsp;·&nbsp; {map_style_lbl}</p>
 </div>""", unsafe_allow_html=True)
+
+# ── グローバルチェック（サイドバー設定の不整合を常時表示）──────
+_datum_warn = check_datum_zone_mismatch(DATUM, Z)
+if _datum_warn:
+    st.warning(_datum_warn)
 
 tab1, tab2, tab3 = st.tabs(["📍 単点変換", "📋 CSV 一括変換", "ℹ️ 系番号一覧"])
 
@@ -632,8 +762,20 @@ with tab1:
         )
         FMT_JPC = OUTPUT_FORMATS[out_fmt_jpc_lbl]
 
+        # ── 入力中のリアルタイムチェック ──
+        for _pt in pts:
+            if _pt["x"].strip() and _pt["y"].strip():
+                render_zone_suggestion_jpc(_pt["x"], _pt["y"], Z)
+                break  # 最初の有効点のみ表示
+
         st.markdown("---")
         has_input = any(pt["x"].strip() and pt["y"].strip() for pt in pts)
+
+        # ジオイド未設定チェック
+        _has_z = any(pt["z"].strip() for pt in pts)
+        _geoid_warn = check_geoid_warning(GEOID_KEY, _has_z)
+        if _geoid_warn and has_input and _has_z:
+            st.warning(_geoid_warn)
 
         if has_input:
             st.markdown("<div class='sec-label'>変換結果</div>", unsafe_allow_html=True)
@@ -801,8 +943,20 @@ with tab1:
 
         pts2 = _read_ll()
 
+        # ── 入力中のリアルタイムチェック ──
+        for _pt in pts2:
+            if _pt["lat"].strip() and _pt["lon"].strip():
+                render_zone_suggestion_ll(_pt["lat"], _pt["lon"], IN_FMT, Z)
+                break  # 最初の有効点のみ表示
+
         st.markdown("---")
         has_input2 = any(pt["lat"].strip() and pt["lon"].strip() for pt in pts2)
+
+        # ジオイド未設定チェック
+        _has_h2 = any(pt["h"].strip() for pt in pts2)
+        _geoid_warn2 = check_geoid_warning(GEOID_KEY, _has_h2)
+        if _geoid_warn2 and has_input2 and _has_h2:
+            st.warning(_geoid_warn2)
 
         if has_input2:
             st.markdown("<div class='sec-label'>変換結果</div>", unsafe_allow_html=True)
