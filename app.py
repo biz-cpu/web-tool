@@ -591,6 +591,36 @@ section[data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"]{ga
 GRS80 / m₀=0.9999 / Kawase2011
 </div>""", unsafe_allow_html=True)
 
+    st.divider()
+
+    # ── 免責事項・プライバシーポリシー ──
+    with st.expander("📋 免責事項・プライバシーポリシー"):
+        st.markdown("""
+<div style='font-size:11px;color:#94a3b8;line-height:1.8'>
+
+<div style='font-size:12px;font-weight:700;color:#e2e8f0;margin-bottom:6px'>⚠️ 免責事項</div>
+
+本ツールによる座標変換・計算結果はあくまで参考値です。<br>
+計算結果の利用によって生じた損害・損失について、<br>
+開発者は一切の責任を負いません。<br>
+実際の測量・施工においては、有資格者による確認を行ってください。
+
+<div style='font-size:12px;font-weight:700;color:#e2e8f0;margin:12px 0 6px'>🔒 プライバシーポリシー</div>
+
+本ツールに入力されたデータ（座標値・高さ等）は<br>
+サーバーに一切保存・記録されません。<br>
+すべての処理はセッション内のみで完結し、<br>
+ブラウザを閉じると同時にデータは消去されます。<br>
+外部への送信はジオイド高取得API（国土地理院）のみです。
+
+<div style='font-size:12px;font-weight:700;color:#e2e8f0;margin:12px 0 6px'>©️ 著作権</div>
+
+© 2026 biz-cpu<br>
+本ソフトウェアの無断複製・転用を禁じます。
+
+</div>
+""", unsafe_allow_html=True)
+
 # ═══════════════════════════════════════════════════════
 # 8. メインヘッダー
 # ═══════════════════════════════════════════════════════
