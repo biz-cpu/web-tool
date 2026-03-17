@@ -281,6 +281,53 @@ def parse_angle(val: str, fk: str) -> float:
 
     return float(s)
 
+def auto_parse_angle(val: str) -> tuple[float, str]:
+    """
+    5フォーマットを自動判別して (十進角度, フォーマットキー) を返す。
+    失敗時は ValueError。
+
+    判別優先順位:
+      1. bearing  : 先頭が N / S（大小文字不問）
+      2. dms      : °′″ の Unicode 記号を含む
+      3. gons     : 末尾に gon / gons / g / gr キーワード（大小無視）
+      4. ddmmssss : DD.MMSSSSSS 構造（小数6桁以上 かつ 分0-59・秒整数0-59）
+      5. decimal  : それ以外の純数値
+    """
+    import re as _re
+    s = val.strip()
+    if not s:
+        raise ValueError("空欄")
+
+    # 1. bearing: 先頭 N or S
+    if _re.match(r"^[NSns]", s):
+        return parse_angle(s, "bearing"), "bearing"
+
+    # 2. dms: Unicode度分秒記号（° ′ ″）を含む ← 半角英字 d/m/s は除外して誤判定防止
+    if any(c in s for c in ("°", "′", "″", "°", "′", "″")):
+        return parse_angle(s, "dms"), "dms"
+
+    # 3. gons: 末尾に gon/gons/g/gr（純数値以外）
+    if _re.search(r"(?i)(gons?|gr?)\s*$", s):
+        return parse_angle(s, "gons"), "gons"
+
+    # 4. ddmmssss: DD.MMSSSSSS（小数6桁以上で分・秒整数が有効範囲）
+    m = _re.match(r"^(-?)(\d{1,3})\.(\d{6,})$", s)
+    if m:
+        deg_int = int(m.group(2))
+        dec_str = m.group(3).ljust(10, "0")
+        mm_val  = int(dec_str[:2])
+        ss_int  = int(dec_str[2:4])
+        if deg_int <= 180 and mm_val <= 59 and ss_int <= 59:
+            return parse_angle(s, "ddmmssss"), "ddmmssss"
+
+    # 5. decimal: 純数値（° 記号付きも可）
+    try:
+        return float(s.replace("°", "")), "decimal"
+    except ValueError:
+        pass
+
+    raise ValueError(f"角度フォーマットを判別できません: {s!r}")
+
 # ── 各フォーマットのプレースホルダー ──
 FORMAT_PLACEHOLDER = {
     "decimal":  "35.68123456",
@@ -1304,52 +1351,67 @@ with tab2:
                     horizontal=True, key="d2")
     st.markdown("---")
 
-    # ── 変換方向ごとの入力フォーマット説明 ──────────────────
-    if dir2 == "平面直角 → 緯度経度":
-        st.markdown("""
-<div style='background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px 16px;margin-bottom:12px'>
-<div style='font-size:12px;font-weight:700;color:#0369a1;margin-bottom:6px'>📥 入力CSVフォーマット（ヘッダーなし・4列固定）</div>
-<code style='font-size:12px'>A列=点名　B列=X(m)　C列=Y(m)　D列=Z標高(m)</code>
-<div style='font-size:11px;color:#64748b;margin-top:6px'>
-・D列（Z標高）は省略可（空欄でもOK）<br>
-・5列目以降は無視されます
-</div>
-</div>
-<div style='background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 16px'>
-<div style='font-size:12px;font-weight:700;color:#15803d;margin-bottom:6px'>📤 出力CSVフォーマット（ヘッダーなし・7列）</div>
-<code style='font-size:12px'>A列=点名　B列=X(m)　C列=Y(m)　D列=Z標高(m)　E列=緯度　F列=経度　G列=楕円体高(m)</code>
-</div>
-""", unsafe_allow_html=True)
-    else:
-        st.markdown("""
-<div style='background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px 16px;margin-bottom:12px'>
-<div style='font-size:12px;font-weight:700;color:#0369a1;margin-bottom:6px'>📥 入力CSVフォーマット（ヘッダーなし・4列固定）</div>
-<code style='font-size:12px'>A列=点名　B列=緯度　C列=経度　D列=楕円体高(m)</code>
-<div style='font-size:11px;color:#64748b;margin-top:6px'>
-・D列（楕円体高）は省略可（空欄でもOK）<br>
-・緯度・経度は十進角度（DD.DDDDDDDD）で入力<br>
-・5列目以降は無視されます
-</div>
-</div>
-<div style='background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 16px'>
-<div style='font-size:12px;font-weight:700;color:#15803d;margin-bottom:6px'>📤 出力CSVフォーマット（ヘッダーなし・7列）</div>
-<code style='font-size:12px'>A列=点名　B列=X(m)　C列=Y(m)　D列=Z標高(m)　E列=緯度　F列=経度　G列=楕円体高(m)</code>
+    # ── 出力フォーマット選択（アップロード前に必ず設定） ──────────
+    c_fmt_lbl, c_fmt_sel = st.columns([2, 4])
+    with c_fmt_lbl:
+        st.markdown(
+            "<div style='padding-top:8px;font-size:12px;font-weight:700;color:#374151'>"
+            "📐 出力フォーマット（緯度・経度）</div>",
+            unsafe_allow_html=True)
+    with c_fmt_sel:
+        out_fmt_b2_lbl = st.selectbox(
+            "CSV出力フォーマット",
+            list(OUTPUT_FORMATS.keys()),
+            index=3,
+            label_visibility="collapsed",
+            key="out_fmt_batch",
+        )
+    FMT_B2 = OUTPUT_FORMATS[out_fmt_b2_lbl]
+
+    st.markdown("---")
+
+    # ── 変換方向ごとの入力・出力仕様カード ──────────────────────
+    _auto_note = (
+        "・緯度・経度は <b>5フォーマット自動判別</b>"
+        "（十進度 / 度分秒 / 度分秒圧縮 DD.MMSSSSSS / 方位角 N/S / Gons）<br>"
+        "・混在入力（行ごとに異なるフォーマット）も対応"
+    )
+    _col_in_jpc  = "A列=点名　B列=X(m)　C列=Y(m)　D列=Z標高(m)"
+    _col_in_ll   = "A列=点名　B列=緯度　C列=経度　D列=楕円体高(m)"
+    _col_out     = "A列=点名　B列=X(m)　C列=Y(m)　D列=Z標高(m)　E列=緯度　F列=経度　G列=楕円体高(m)"
+    _in_note_jpc = "・D列（Z標高）は省略可&emsp;・5列目以降は無視"
+    _in_note_ll  = f"{_auto_note}<br>・D列（楕円体高）は省略可&emsp;・5列目以降は無視"
+
+    col_in  = _col_in_jpc  if dir2 == "平面直角 → 緯度経度" else _col_in_ll
+    note_in = _in_note_jpc if dir2 == "平面直角 → 緯度経度" else _in_note_ll
+
+    st.markdown(f"""
+<div style='display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px'>
+  <div style='background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px 14px'>
+    <div style='font-size:11px;font-weight:700;color:#0369a1;margin-bottom:5px'>📥 入力CSV（ヘッダーなし・4列固定）</div>
+    <code style='font-size:11px;display:block;margin-bottom:5px'>{col_in}</code>
+    <div style='font-size:10.5px;color:#64748b;line-height:1.6'>{note_in}</div>
+  </div>
+  <div style='background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 14px'>
+    <div style='font-size:11px;font-weight:700;color:#15803d;margin-bottom:5px'>📤 出力CSV（ヘッダーなし・7列）　緯度経度 → <span style='color:#0369a1;font-weight:700'>{out_fmt_b2_lbl}</span></div>
+    <code style='font-size:11px;display:block'>{_col_out}</code>
+  </div>
 </div>
 """, unsafe_allow_html=True)
 
     st.markdown("")
     up1 = st.file_uploader("CSVファイルをアップロード", ["csv","txt"], key="u1")
-
     src = up1.read().decode("utf-8-sig") if up1 else ""
 
     if src.strip():
         try:
-            # ヘッダーなしで読み込み（先頭4列のみ使用）
-            df_in = pd.read_csv(io.StringIO(src), header=None, dtype=str,
-                                usecols=range(min(4, sum(1 for _ in io.StringIO(src).readline().split(",")))))
-            # 4列未満の場合は空列で補完
+            # ヘッダーなし・先頭4列のみ読み込み（5列目以降は無視）
+            df_in = pd.read_csv(io.StringIO(src), header=None, dtype=str)
+            # 4列未満は空列補完
             while len(df_in.columns) < 4:
                 df_in[len(df_in.columns)] = ""
+            # 5列目以降を切り捨て
+            df_in = df_in.iloc[:, :4]
 
             rows_out = []
             pb = st.progress(0, "変換中...")
@@ -1358,21 +1420,20 @@ with tab2:
             for idx, (_, row) in enumerate(df_in.iterrows()):
                 pb.progress((idx+1)/total, f"{idx+1}/{total} 点処理中")
                 try:
-                    # A〜D列のみ読み込み（5列目以降は無視）
-                    name  = str(row.iloc[0]).strip()
-                    col_b = str(row.iloc[1]).strip() if len(row) > 1 else ""
-                    col_c = str(row.iloc[2]).strip() if len(row) > 2 else ""
-                    col_d = str(row.iloc[3]).strip() if len(row) > 3 else ""
+                    def _v(s):
+                        s = str(s).strip()
+                        return "" if s.lower() in ("nan","none","") else s
 
-                    # nan文字列を空欄扱いに統一
-                    def _v(s): return "" if s.lower() in ("nan","none","") else s
-                    col_b, col_c, col_d = _v(col_b), _v(col_c), _v(col_d)
+                    name  = _v(row.iloc[0])
+                    col_b = _v(row.iloc[1])
+                    col_c = _v(row.iloc[2])
+                    col_d = _v(row.iloc[3]) if len(row) > 3 else ""
 
                     out_x = out_y = out_z = out_lat = out_lon = out_h = ""
                     lat_dd = lon_dd = None
 
                     if dir2 == "平面直角 → 緯度経度":
-                        # B=X C=Y D=Z標高
+                        # B=X(数値) C=Y(数値) D=Z標高(数値・省略可)
                         if not (col_b and col_c):
                             raise ValueError("B列(X)・C列(Y)が必要です")
                         Xv = float(col_b); Yv = float(col_c)
@@ -1389,43 +1450,54 @@ with tab2:
                         out_x   = f"{Xv:.4f}"
                         out_y   = f"{Yv:.4f}"
                         out_z   = f"{Zv:.3f}" if Zv is not None else ""
-                        out_lat = fmt_decimal(lat_dd)
-                        out_lon = fmt_decimal(lon_dd)
+                        out_lat = format_angle(lat_dd, FMT_B2)
+                        out_lon = format_angle(lon_dd, FMT_B2)
                         out_h   = f"{ellH:.3f}" if ellH is not None else ""
+                        _detected_fmt = ""
 
                     else:
-                        # B=緯度 C=経度 D=楕円体高
+                        # B=緯度（5フォーマット自動判別）C=経度 D=楕円体高（省略可）
                         if not (col_b and col_c):
                             raise ValueError("B列(緯度)・C列(経度)が必要です")
-                        lv  = float(col_b); lov = float(col_c)
+                        lv,  _fmt_lat = auto_parse_angle(col_b)
+                        lov, _fmt_lon = auto_parse_angle(col_c)
                         hv  = float(col_d) if col_d else None
                         res = latlon_to_jpc(lv, lov, Z)
                         if res is None: raise ValueError(f"系番号 {Z} が無効")
                         Xr, Yr = res
                         lat_dd, lon_dd = lv, lov
-                        # 楕円体高 → Z標高（h - N）
                         elev_b = None
                         if hv is not None and GEOID_KEY != "NONE":
                             N_b = fetch_geoid(lv, lov, GEOID_KEY)
                             if N_b is not None: elev_b = hv - N_b
                         elif hv is not None:
-                            elev_b = hv  # 補正なしの場合そのまま
+                            elev_b = hv
                         out_x   = f"{Xr:.4f}"
                         out_y   = f"{Yr:.4f}"
                         out_z   = f"{elev_b:.3f}" if elev_b is not None else ""
-                        out_lat = fmt_decimal(lv)
-                        out_lon = fmt_decimal(lov)
+                        out_lat = format_angle(lv, FMT_B2)
+                        out_lon = format_angle(lov, FMT_B2)
                         out_h   = f"{hv:.3f}" if hv is not None else ""
+                        _detected_fmt = _fmt_lat
 
+                    _fmt_labels = {
+                        "decimal":"十進角度","dms":"度分秒","bearing":"方位角",
+                        "ddmmssss":"度分秒圧縮","gons":"Gons","":"—",
+                    }
                     rows_out.append({
-                        "点名": name, "X(m)": out_x, "Y(m)": out_y,
-                        "Z標高(m)": out_z, "緯度": out_lat, "経度": out_lon,
+                        "点名":        name,
+                        "X(m)":        out_x,
+                        "Y(m)":        out_y,
+                        "Z標高(m)":    out_z,
+                        "緯度":        out_lat,
+                        "経度":        out_lon,
                         "楕円体高(m)": out_h,
+                        "判別FMT":     _fmt_labels.get(_detected_fmt, _detected_fmt),
                         "_lat": lat_dd, "_lon": lon_dd, "_err": None,
                     })
                 except Exception as ex:
                     rows_out.append({
-                        "点名": str(row.iloc[0]) if len(row) > 0 else "?",
+                        "点名": _v(row.iloc[0]) if len(row) > 0 else "?",
                         "_err": str(ex), "_lat": None, "_lon": None,
                     })
 
@@ -1441,7 +1513,11 @@ with tab2:
                         st.markdown(f"<span class='err'>❌ {r['点名']} — {r['_err']}</span>",
                                     unsafe_allow_html=True)
 
-            show = ["点名","X(m)","Y(m)","Z標高(m)","緯度","経度","楕円体高(m)"]
+            if dir2 == "緯度経度 → 平面直角":
+                show = ["点名","判別FMT","X(m)","Y(m)","Z標高(m)","緯度","経度","楕円体高(m)"]
+                st.caption("💡 判別FMT = 入力の緯度・経度に自動判別されたフォーマット")
+            else:
+                show = ["点名","X(m)","Y(m)","Z標高(m)","緯度","経度","楕円体高(m)"]
             show = [c for c in show if c in ok.columns]
             st.dataframe(ok[show], use_container_width=True, hide_index=True)
 
@@ -1460,7 +1536,7 @@ with tab2:
                 for _, r in ok.iterrows()
             ]
             st.download_button(
-                "📥 結果 CSV ダウンロード",
+                f"📥 結果 CSV ダウンロード（{out_fmt_b2_lbl}）",
                 "\n".join(csv_lines),
                 "batch_result.csv", "text/csv"
             )
