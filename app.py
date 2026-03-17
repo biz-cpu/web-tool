@@ -920,13 +920,13 @@ with tab1:
         )
         IN_FMT_CVT = OUTPUT_FORMATS[in_fmt_cvt_lbl]
 
-        # 出力フォーマット
-        st.markdown("<div class='sec-label'>出力フォーマット</div>", unsafe_allow_html=True)
-        out_fmt_cvt_lbl = st.selectbox(
-            "出力フォーマット（形式変換）",
-            list(OUTPUT_FORMATS.keys()),
-            index=3, label_visibility="collapsed", key="out_fmt_cvt"
-        )
+        # OUT_FMT_CVT は入力欄より後で定義するため、ここでは key だけ事前参照
+        # （session_state に既存値があれば使い、なければデフォルト index=3）
+        _cvt_fmt_keys = list(OUTPUT_FORMATS.keys())
+        _cvt_fmt_default = _cvt_fmt_keys[3]
+        out_fmt_cvt_lbl = st.session_state.get("out_fmt_cvt", _cvt_fmt_default)
+        if out_fmt_cvt_lbl not in OUTPUT_FORMATS:
+            out_fmt_cvt_lbl = _cvt_fmt_default
         OUT_FMT_CVT = OUTPUT_FORMATS[out_fmt_cvt_lbl]
 
         ph_cvt_lat = FORMAT_PLACEHOLDER[IN_FMT_CVT]
@@ -1011,6 +1011,16 @@ with tab1:
             for f in ("name","lat","lon","h"):
                 k = f"cvt_{f}_{i}"
                 if k in st.session_state: pt[f] = st.session_state[k]
+
+        # 出力フォーマット選択（入力欄のすぐ下）
+        st.markdown("<div class='sec-label'>出力フォーマット</div>", unsafe_allow_html=True)
+        out_fmt_cvt_lbl = st.selectbox(
+            "出力フォーマット（形式変換）",
+            list(OUTPUT_FORMATS.keys()),
+            index=_cvt_fmt_keys.index(out_fmt_cvt_lbl),
+            label_visibility="collapsed", key="out_fmt_cvt"
+        )
+        OUT_FMT_CVT = OUTPUT_FORMATS[out_fmt_cvt_lbl]
 
         st.markdown("---")
         has_cvt = any(pt["lat"].strip() and pt["lon"].strip() for pt in pts_cvt)
