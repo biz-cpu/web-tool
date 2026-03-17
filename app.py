@@ -478,7 +478,7 @@ st.markdown(f"""
 <div class="app-hdr">
   <h1>🛰️ GNSS SmartShift ICT</h1>
   <p style='font-size:13px;color:#cbd5e1;margin:2px 0 0;font-weight:500;letter-spacing:.05em'>マルチメーカー対応 ローカライゼーション統合システム</p>
-  <p style='margin-top:6px'>第 {Z} 系 &nbsp;·&nbsp; {datum_lbl} &nbsp;·&nbsp; {map_style_lbl}</p>
+  <p style='margin-top:6px'>第 {Z} 系 &nbsp;·&nbsp; {datum_lbl} &nbsp;·&nbsp; {geoid_lbl} &nbsp;·&nbsp; {map_style_lbl}</p>
 </div>""", unsafe_allow_html=True)
 
 tab1, tab2, tab3 = st.tabs(["📍 単点変換", "📋 CSV 一括変換", "ℹ️ 系番号一覧"])
@@ -494,7 +494,7 @@ tab1, tab2, tab3 = st.tabs(["📍 単点変換", "📋 CSV 一括変換", "ℹ�
 
 def _init_jpc():
     if "pts_jpc" not in st.session_state:
-        st.session_state["pts_jpc"] = [{"name":"pt1","x":"","y":"","z":""}]
+        st.session_state["pts_jpc"] = [{"name":"","x":"","y":"","z":""}]
     for i, pt in enumerate(st.session_state["pts_jpc"]):
         for f,v in [("name",pt["name"]),("x",pt["x"]),("y",pt["y"]),("z",pt["z"])]:
             k = f"jpc_{f}_{i}"
@@ -513,7 +513,7 @@ def _read_jpc():
 
 def _init_ll():
     if "pts_ll" not in st.session_state:
-        st.session_state["pts_ll"] = [{"name":"pt1","lat":"","lon":"","h":""}]
+        st.session_state["pts_ll"] = [{"name":"","lat":"","lon":"","h":""}]
     for i, pt in enumerate(st.session_state["pts_ll"]):
         for f,v in [("name",pt["name"]),("lat",pt["lat"]),("lon",pt["lon"]),("h",pt["h"])]:
             k = f"ll_{f}_{i}"
@@ -569,11 +569,11 @@ with tab1:
             if st.button("＋ 点を追加", key="add_jpc"):
                 _read_jpc()
                 n = len(st.session_state["pts_jpc"]) + 1
-                st.session_state["pts_jpc"].append({"name":f"pt{n}","x":"","y":"","z":""})
+                st.session_state["pts_jpc"].append({"name":"","x":"","y":"","z":""})
                 st.rerun()
         with col_clr:
             if st.button("🗑 全クリア", key="clr_jpc"):
-                st.session_state["pts_jpc"] = [{"name":"pt1","x":"","y":"","z":""}]
+                st.session_state["pts_jpc"] = [{"name":"","x":"","y":"","z":""}]
                 _clear_keys("jpc_")
                 st.rerun()
         with col_swap:
@@ -593,7 +593,7 @@ with tab1:
                     f"<div style='padding-top:{toppad}px;font-size:12px;font-weight:700;color:#64748b'>#{i+1}</div>",
                     unsafe_allow_html=True)
             with c1:
-                st.text_input("点名", key=f"jpc_name_{i}",
+                st.text_input("点名", placeholder=f"pt{i+1}", key=f"jpc_name_{i}",
                               label_visibility="visible" if i==0 else "collapsed")
             with c2:
                 st.text_input("X 北が正 (m)" if i==0 else "X (m)",
@@ -746,11 +746,11 @@ with tab1:
             if st.button("＋ 点を追加", key="add_ll"):
                 _read_ll()
                 n = len(st.session_state["pts_ll"]) + 1
-                st.session_state["pts_ll"].append({"name":f"pt{n}","lat":"","lon":"","h":""})
+                st.session_state["pts_ll"].append({"name":"","lat":"","lon":"","h":""})
                 st.rerun()
         with col_clr2:
             if st.button("🗑 全クリア", key="clr_ll"):
-                st.session_state["pts_ll"] = [{"name":"pt1","lat":"","lon":"","h":""}]
+                st.session_state["pts_ll"] = [{"name":"","lat":"","lon":"","h":""}]
                 _clear_keys("ll_")
                 st.rerun()
         with col_swap2:
@@ -770,7 +770,7 @@ with tab1:
                     f"<div style='padding-top:{toppad}px;font-size:12px;font-weight:700;color:#64748b'>#{i+1}</div>",
                     unsafe_allow_html=True)
             with c1:
-                st.text_input("点名", key=f"ll_name_{i}",
+                st.text_input("点名", placeholder=f"pt{i+1}", key=f"ll_name_{i}",
                               label_visibility="visible" if i==0 else "collapsed")
             with c2:
                 st.text_input(
@@ -903,7 +903,7 @@ with tab1:
     else:  # dir1 == "緯度経度 形式変換"
         # session_state 初期化
         if "pts_cvt" not in st.session_state:
-            st.session_state["pts_cvt"] = [{"name":"pt1","lat":"","lon":"","h":""}]
+            st.session_state["pts_cvt"] = [{"name":"","lat":"","lon":"","h":""}]
         for i, pt in enumerate(st.session_state["pts_cvt"]):
             for f,v in [("name",pt.get("name","")),("lat",pt.get("lat","")),
                         ("lon",pt.get("lon","")),("h",pt.get("h",""))]:
@@ -940,11 +940,11 @@ with tab1:
                         k = f"cvt_{f}_{i}"
                         if k in st.session_state: pt[f] = st.session_state[k]
                 n = len(st.session_state["pts_cvt"]) + 1
-                st.session_state["pts_cvt"].append({"name":f"pt{n}","lat":"","lon":"","h":""})
+                st.session_state["pts_cvt"].append({"name":"","lat":"","lon":"","h":""})
                 st.rerun()
         with col_clr_c:
             if st.button("🗑 全クリア", key="clr_cvt"):
-                st.session_state["pts_cvt"] = [{"name":"pt1","lat":"","lon":""}]
+                st.session_state["pts_cvt"] = [{"name":"","lat":"","lon":""}]
                 for k in [k for k in st.session_state if k.startswith("cvt_")]:
                     del st.session_state[k]
                 st.rerun()
@@ -973,7 +973,7 @@ with tab1:
                     f"<div style='padding-top:{toppad}px;font-size:12px;font-weight:700;color:#64748b'>#{i+1}</div>",
                     unsafe_allow_html=True)
             with c1:
-                st.text_input("点名", key=f"cvt_name_{i}",
+                st.text_input("点名", placeholder=f"pt{i+1}", key=f"cvt_name_{i}",
                               label_visibility="visible" if i==0 else "collapsed")
             with c2:
                 st.text_input(
@@ -1127,7 +1127,7 @@ with tab2:
 
     # CSV入出力フォーマット説明
     st.markdown("""
-**CSVフォーマット（ヘッダーなし）**  
+**CSVフォーマット**  
 `A列=点名, B列=X(m), C列=Y(m), D列=Z標高(m), E列=緯度, F列=経度, G列=楕円体高(m)`
 
 - 平面直角 → 緯度経度: **A〜D列を入力**（E〜G は自動計算して出力）
@@ -1141,8 +1141,9 @@ with tab2:
                             ["csv","txt"], key="u1")
     ca, cb, cc_smp = st.columns([4, 1, 1])
     with ca:
+        _ph = S1 if dir2 == "平面直角 → 緯度経度" else S2
         tx1 = st.text_area("貼り付け入力", height=130,
-                            placeholder=(S1 if "平面直角" in dir2 else S2), key="t1")
+                            placeholder=_ph, key="t1")
     with cb:
         if st.button("サンプルJPC", key="s1"):
             st.session_state["t1"] = S1; st.rerun()
