@@ -252,101 +252,83 @@ PIN_COLORS = [
     [34,  197, 94 ],  # emerald
 ]
 
-def make_pydeck_map(points: list[dict], map_style_key: str, zoom: int = 12) -> pdk.Deck:
-    """
-    points: [{"name":"pt1","lat":35.68,"lon":139.77}, ...]
-    map_style_key: "標準地図..." or "航空写真..."
-    """
+def render_map(points: list[dict], map_style_key: str, zoom: int = 13):
+    """Leaflet.js ベースの地図を st.components.v1.html で描画。
+    APIキー不要。標準地図=OSM, 航空写真=Esri World Imagery。"""
     if not points:
-        return None
+        return
+    import streamlit.components.v1 as components
+    import json as _json
 
-    # 中心座標
+    is_aerial = "航空" in map_style_key
+    tile_url  = ESRI_TILE if is_aerial else OSM_TILE
+    attr      = ("&copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, "
+                 "Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community"
+                 if is_aerial
+                 else '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors')
+
     clat = sum(p["lat"] for p in points) / len(points)
     clon = sum(p["lon"] for p in points) / len(points)
+    z    = zoom if len(points) == 1 else max(8, zoom - 3)
 
-    # タイルレイヤー（航空 or 標準）
-    if "航空" in map_style_key:
-        tile_url = ESRI_TILE
-        map_style = "mapbox://styles/mapbox/dark-v9"  # 衛星の時はdarkベース
-    else:
-        tile_url = OSM_TILE
-        map_style = "mapbox://styles/mapbox/light-v9"
-
-    tile_layer = pdk.Layer(
-        "TileLayer",
-        data=None,
-        get_tile_data=tile_url,
-        min_zoom=0,
-        max_zoom=19,
-        tile_size=256,
-    )
-
-    # ScatterplotLayer（ピン円）
-    scatter_data = [
+    # ピンデータをJSONに
+    pins_js = _json.dumps([
         {
             "name": p["name"],
             "lat":  p["lat"],
             "lon":  p["lon"],
-            "color": PIN_COLORS[i % len(PIN_COLORS)],
-            "tooltip": p.get("tooltip", p["name"]),
+            "tip":  p.get("tooltip", p["name"]),
+            "color": "#{:02x}{:02x}{:02x}".format(*PIN_COLORS[i % len(PIN_COLORS)]),
         }
         for i, p in enumerate(points)
-    ]
+    ])
 
-    scatter_layer = pdk.Layer(
-        "ScatterplotLayer",
-        data=scatter_data,
-        get_position=["lon","lat"],
-        get_color="color",
-        get_radius=18,
-        radius_min_pixels=6,
-        radius_max_pixels=20,
-        pickable=True,
-        stroked=True,
-        line_width_min_pixels=2,
-        get_line_color=[255,255,255],
-    )
+    html = f"""<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>html,body{{margin:0;padding:0;height:100%;}}#map{{height:420px;width:100%;border-radius:12px;}}</style>
+</head><body>
+<div id="map"></div>
+<script>
+var map = L.map('map').setView([{clat},{clon}],{z});
+L.tileLayer('{tile_url}',{{
+  attribution:'{attr}',
+  maxZoom:19,
+  tileSize:256
+}}).addTo(map);
 
-    # TextLayer（点名ラベル）
-    text_layer = pdk.Layer(
-        "TextLayer",
-        data=scatter_data,
-        get_position=["lon","lat"],
-        get_text="name",
-        get_size=13,
-        get_color=[30,30,30] if "標準" in map_style_key else [255,255,255],
-        get_anchor_x="'middle'",
-        get_alignment_baseline="'bottom'",
-        get_pixel_offset=[0,-14],
-        font_family="'Noto Sans JP', sans-serif",
-        font_weight=700,
-    )
+var pins = {pins_js};
+pins.forEach(function(p){{
+  var svgIcon = L.divIcon({{
+    className:'',
+    html:'<svg width="32" height="44" viewBox="0 0 32 44" xmlns="http://www.w3.org/2000/svg">'
+      +'<path d="M16 0C7.163 0 0 7.163 0 16c0 10.667 16 28 16 28s16-17.333 16-28C32 7.163 24.837 0 16 0z" fill="'+p.color+'"/>'
+      +'<circle cx="16" cy="16" r="7" fill="white" fill-opacity="0.9"/>'
+      +'</svg>',
+    iconSize:[32,44],iconAnchor:[16,44],popupAnchor:[0,-44]
+  }});
+  L.marker([p.lat,p.lon],{{icon:svgIcon}})
+   .bindPopup('<b>'+p.name+'</b><br/>'+p.tip+'<br/>lat:'+p.lat.toFixed(6)+'<br/>lon:'+p.lon.toFixed(6))
+   .addTo(map);
+  L.marker([p.lat,p.lon],{{
+    icon:L.divIcon({{
+      className:'',
+      html:'<div style="font:bold 12px/1 Noto Sans JP,sans-serif;color:#1e293b;white-space:nowrap;'
+          +'text-shadow:0 1px 3px #fff,0 -1px 3px #fff,1px 0 3px #fff,-1px 0 3px #fff;'
+          +'margin-top:-48px;margin-left:4px;">'+p.name+'</div>',
+      iconAnchor:[0,0]
+    }})
+  }}).addTo(map);
+}});
+if(pins.length>1){{
+  var bounds=L.latLngBounds(pins.map(function(p){{return[p.lat,p.lon];}}));
+  map.fitBounds(bounds,{{padding:[40,40]}});
+}}
+</script></body></html>"""
 
-    view = pdk.ViewState(
-        latitude=clat, longitude=clon,
-        zoom=zoom if len(points)==1 else max(7, zoom-3),
-        pitch=0,
-    )
-
-    tooltip = {
-        "html": "<b>{name}</b><br/>lat: {lat}<br/>lon: {lon}",
-        "style": {"backgroundColor":"#0f172a","color":"#f1f5f9","fontSize":"12px","padding":"8px 12px","borderRadius":"8px"},
-    }
-
-    return pdk.Deck(
-        layers=[tile_layer, scatter_layer, text_layer],
-        initial_view_state=view,
-        map_style=map_style,
-        tooltip=tooltip,
-    )
-
-def render_map(points: list[dict], map_style_key: str, zoom: int = 13):
-    """地図をStreamlitに描画"""
-    if not points:
-        return
-    deck = make_pydeck_map(points, map_style_key, zoom)
-    if deck:
-        st.pydeck_chart(deck, use_container_width=True)
+    components.html(html, height=430, scrolling=False)
 
 # ═══════════════════════════════════════════════════════
 # 6. ページ設定・CSS
@@ -424,48 +406,67 @@ section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] span { col
 # ═══════════════════════════════════════════════════════
 
 with st.sidebar:
-    st.markdown("## ⚙️ 共通設定")
-    st.markdown("---")
+    # サイドバーのマージンを CSS でさらに詰める
+    st.markdown("""<style>
+section[data-testid="stSidebar"] .block-container{padding-top:0.8rem!important;padding-bottom:0.5rem!important;}
+section[data-testid="stSidebar"] .stMarkdown p{margin:0!important;padding:0!important;line-height:1.3!important;}
+section[data-testid="stSidebar"] .element-container{margin-bottom:0!important;}
+section[data-testid="stSidebar"] hr{margin:6px 0!important;}
+section[data-testid="stSidebar"] .stSelectbox{margin-bottom:0!important;}
+section[data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"]{gap:0!important;}
+</style>""", unsafe_allow_html=True)
 
-    st.markdown("**📌 座標系（系番号）**")
+    st.markdown("<div style='font-size:15px;font-weight:700;color:#f1f5f9;padding:4px 0 6px'>⚙️ 共通設定</div>", unsafe_allow_html=True)
+    st.divider()
+
+    # 座標系
+    st.markdown("<div style='font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:.12em;text-transform:uppercase;margin-bottom:3px'>📌 座標系（系番号）</div>", unsafe_allow_html=True)
     zone_inv = {v:k for k,v in JPC_ZONE_LABELS.items()}
     zone_lbl = st.selectbox("座標系", list(JPC_ZONE_LABELS.values()),
                              index=8, label_visibility="collapsed")
     Z = zone_inv[zone_lbl]
     la0, lo0 = JPC_ORIGINS[Z]
-    st.markdown(f"<div class='zbadge'>第 {Z} 系</div>", unsafe_allow_html=True)
-    st.markdown(f"<div class='zinfo'>原点 φ₀={la0}° / λ₀={lo0}°</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='display:flex;align-items:center;gap:6px;margin:3px 0 2px'>"
+                f"<span class='zbadge' style='font-size:10px;padding:1px 8px'>第 {Z} 系</span>"
+                f"<span style='font-size:10px;color:#64748b'>φ₀={la0}° λ₀={lo0}°</span></div>", unsafe_allow_html=True)
 
-    st.markdown("---")
-    st.markdown("**🌐 測地系**")
+    st.divider()
+
+    # 測地系
+    st.markdown("<div style='font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:.12em;text-transform:uppercase;margin-bottom:3px'>🌐 測地系</div>", unsafe_allow_html=True)
     datum_inv = {v["label"]:k for k,v in DATUMS.items()}
     datum_lbl = st.selectbox("測地系", list(datum_inv.keys()),
                               index=0, label_visibility="collapsed")
     DATUM = datum_inv[datum_lbl]
 
-    st.markdown("---")
-    st.markdown("**📡 ジオイドモデル**")
+    st.divider()
+
+    # ジオイドモデル
+    st.markdown("<div style='font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:.12em;text-transform:uppercase;margin-bottom:3px'>📡 ジオイドモデル</div>", unsafe_allow_html=True)
     geoid_lbl = st.selectbox("ジオイドモデル", list(GEOID_MODELS.values()),
                               index=0, label_visibility="collapsed")
     GEOID_KEY = [k for k,v in GEOID_MODELS.items() if v==geoid_lbl][0]
 
-    st.markdown("---")
-    st.markdown("**📐 出力フォーマット（緯度経度）**")
+    st.divider()
+
+    # 出力フォーマット
+    st.markdown("<div style='font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:.12em;text-transform:uppercase;margin-bottom:3px'>📐 出力フォーマット</div>", unsafe_allow_html=True)
     fmt_lbl = st.selectbox("出力フォーマット", list(OUTPUT_FORMATS.keys()),
                             index=0, label_visibility="collapsed")
     FMT = OUTPUT_FORMATS[fmt_lbl]
 
-    st.markdown("---")
-    st.markdown("**🗺️ 地図スタイル**")
+    st.divider()
+
+    # 地図スタイル
+    st.markdown("<div style='font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:.12em;text-transform:uppercase;margin-bottom:3px'>🗺️ 地図スタイル</div>", unsafe_allow_html=True)
     map_style_lbl = st.selectbox("地図スタイル", list(MAP_STYLES.keys()),
                                   index=0, label_visibility="collapsed")
 
-    st.markdown("---")
-    st.markdown(f"""<div class='acc'>往復誤差 &lt; 0.01mm</div>
-<div class='zinfo' style='margin-top:6px'>
-GRS80楕円体 / m₀=0.9999<br>
-Kawase (2011) 高次展開式<br>
-{GEOID_MODELS[GEOID_KEY]}
+    st.divider()
+
+    st.markdown(f"""<div class='acc' style='margin-bottom:4px'>往復誤差 &lt; 0.01mm</div>
+<div style='font-size:10px;color:#475569;line-height:1.6'>
+GRS80 / m₀=0.9999 / Kawase2011
 </div>""", unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════════════════
@@ -499,7 +500,7 @@ with tab1:
             st.session_state[key_pts] = [{"name":"pt1","x":"","y":"","z":""}]
         pts: list = st.session_state[key_pts]
 
-        col_add, col_clr, _ = st.columns([1,1,6])
+        col_add, col_clr, col_swap, _ = st.columns([1,1,1.3,4])
         with col_add:
             if st.button("＋ 点を追加", key="add_jpc"):
                 pts.append({"name":f"pt{len(pts)+1}","x":"","y":"","z":""})
@@ -507,6 +508,11 @@ with tab1:
         with col_clr:
             if st.button("🗑 全クリア", key="clr_jpc"):
                 st.session_state[key_pts] = [{"name":"pt1","x":"","y":"","z":""}]
+                st.rerun()
+        with col_swap:
+            if st.button("⇄ X↔Y 入替", key="swap_jpc", help="全点の X と Y の値を入れ替えます"):
+                for p in pts:
+                    p["x"], p["y"] = p["y"], p["x"]
                 st.rerun()
 
         st.markdown("<div class='sec-label'>入力（平面直角座標）</div>", unsafe_allow_html=True)
@@ -655,7 +661,7 @@ with tab1:
         ph_lat = FORMAT_PLACEHOLDER[IN_FMT]
         ph_lon = FORMAT_PLACEHOLDER[IN_FMT].replace("35","139").replace("N","N").replace("40","47")
 
-        col_add2, col_clr2, _ = st.columns([1,1,6])
+        col_add2, col_clr2, col_swap2, _ = st.columns([1,1,1.4,4])
         with col_add2:
             if st.button("＋ 点を追加", key="add_ll"):
                 pts2.append({"name":f"pt{len(pts2)+1}","lat":"","lon":"","h":""})
@@ -663,6 +669,11 @@ with tab1:
         with col_clr2:
             if st.button("🗑 全クリア", key="clr_ll"):
                 st.session_state[key_pts2] = [{"name":"pt1","lat":"","lon":"","h":""}]
+                st.rerun()
+        with col_swap2:
+            if st.button("⇄ 緯↔経 入替", key="swap_ll", help="全点の緯度と経度の値を入れ替えます"):
+                for p in pts2:
+                    p["lat"], p["lon"] = p["lon"], p["lat"]
                 st.rerun()
 
         st.markdown(f"<div class='sec-label'>入力（{in_fmt_lbl}）</div>", unsafe_allow_html=True)
@@ -729,7 +740,7 @@ with tab1:
   <span style='display:inline-block;width:10px;height:10px;border-radius:50%;background:{color_css};margin-right:6px'></span>
   {pt['name']}
 </div>""", unsafe_allow_html=True)
-                    rc1,rc2,rc3 = st.columns(3)
+                    rc1,rc2,rc3,rc4 = st.columns(4)
                     with rc1:
                         st.markdown(f"""<div class='rc'>
 <div class='rc-lbl' style='color:#3b82f6'>X 北が正 (m)</div>
@@ -739,6 +750,12 @@ with tab1:
 <div class='rc-lbl' style='color:#10b981'>Y 東が正 (m)</div>
 <div class='rc-val'>{Yr:,.4f}</div></div>""", unsafe_allow_html=True)
                     with rc3:
+                        st.markdown(f"""<div class='rc'>
+<div class='rc-lbl' style='color:#8b5cf6'>楕円体高 h (m)</div>
+<div class='rc-val'>{f"{hv:.3f} m" if pt["h"].strip() else "—"}</div>
+<div class='rc-sub'>{f"入力値そのまま" if pt["h"].strip() else "未入力"}</div>
+</div>""", unsafe_allow_html=True)
+                    with rc4:
                         st.markdown(f"""<div class='rc'>
 <div class='rc-lbl' style='color:#f59e0b'>座標系</div>
 <div class='rc-val'>第 {Z} 系</div>
