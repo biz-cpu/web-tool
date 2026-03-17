@@ -340,7 +340,7 @@ if(pins.length>1){{
 # ═══════════════════════════════════════════════════════
 
 st.set_page_config(
-    page_title="ローカライゼーション用座標変換",
+    page_title="GNSS SmartShift ICT",
     page_icon="📐", layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -457,7 +457,7 @@ section[data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"]{ga
     # 地図スタイル
     st.markdown("<div style='font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:.12em;text-transform:uppercase;margin-bottom:3px'>🗺️ 地図スタイル</div>", unsafe_allow_html=True)
     map_style_lbl = st.selectbox("地図スタイル", list(MAP_STYLES.keys()),
-                                  index=0, label_visibility="collapsed")
+                                  index=1, label_visibility="collapsed")
 
     st.divider()
 
@@ -476,8 +476,9 @@ _fmt_lbl_default = list(OUTPUT_FORMATS.keys())[0]
 
 st.markdown(f"""
 <div class="app-hdr">
-  <h1>📐 ローカライゼーション用座標変換</h1>
-  <p>第 {Z} 系 &nbsp;·&nbsp; {datum_lbl} &nbsp;·&nbsp; {map_style_lbl}</p>
+  <h1>🛰️ GNSS SmartShift ICT</h1>
+  <p style='font-size:13px;color:#cbd5e1;margin:2px 0 0;font-weight:500;letter-spacing:.05em'>マルチメーカー対応 ローカライゼーション統合システム</p>
+  <p style='margin-top:6px'>第 {Z} 系 &nbsp;·&nbsp; {datum_lbl} &nbsp;·&nbsp; {map_style_lbl}</p>
 </div>""", unsafe_allow_html=True)
 
 tab1, tab2, tab3 = st.tabs(["📍 単点変換", "📋 CSV 一括変換", "ℹ️ 系番号一覧"])
@@ -627,7 +628,7 @@ with tab1:
         out_fmt_jpc_lbl = st.selectbox(
             "出力フォーマットJPC",
             list(OUTPUT_FORMATS.keys()),
-            index=0, label_visibility="collapsed", key="out_fmt_jpc"
+            index=3, label_visibility="collapsed", key="out_fmt_jpc"
         )
         FMT_JPC = OUTPUT_FORMATS[out_fmt_jpc_lbl]
 
@@ -637,7 +638,7 @@ with tab1:
         if has_input:
             st.markdown("<div class='sec-label'>変換結果</div>", unsafe_allow_html=True)
             map_rows, csv_rows = [], []
-            csv_hdr = f"点名,X(m),Y(m),Z標高(m),ジオイド高N(m),楕円体高h(m),緯度_{out_fmt_jpc_lbl},経度_{out_fmt_jpc_lbl}"
+            # CSV統一フォーマット（ヘッダーなし）
 
             for i, pt in enumerate(pts):
                 if not (pt["x"].strip() and pt["y"].strip()):
@@ -717,7 +718,7 @@ with tab1:
             if map_rows:
                 st.markdown("#### 📍 地図")
                 render_map(map_rows, map_style_lbl, zoom=13)
-                csv_out = "\ufeff" + csv_hdr + "\n" + "\n".join(csv_rows)
+                csv_out = "\n".join(csv_rows)
                 st.download_button("📥 全点 CSV ダウンロード", csv_out, "converted.csv", "text/csv")
         else:
             st.info("X・Y 座標を入力してください。")
@@ -806,7 +807,7 @@ with tab1:
         if has_input2:
             st.markdown("<div class='sec-label'>変換結果</div>", unsafe_allow_html=True)
             map_rows2, csv_rows2 = [], []
-            csv_hdr2 = "点名,緯度_入力,経度_入力,楕円体高h(m),X(m),Y(m),Z標高(m),系番号"
+            # CSV統一フォーマット（ヘッダーなし）
 
             for i, pt in enumerate(pts2):
                 if not (pt["lat"].strip() and pt["lon"].strip()):
@@ -891,7 +892,7 @@ with tab1:
             if map_rows2:
                 st.markdown("#### 📍 地図")
                 render_map(map_rows2, map_style_lbl, zoom=13)
-                csv_out2 = "\ufeff" + csv_hdr2 + "\n" + "\n".join(csv_rows2)
+                csv_out2 = "\n".join(csv_rows2)
                 st.download_button("📥 全点 CSV ダウンロード", csv_out2, "converted.csv", "text/csv")
         else:
             st.info(f"緯度・経度を {in_fmt_lbl} 形式で入力してください。")
@@ -924,7 +925,7 @@ with tab1:
         out_fmt_cvt_lbl = st.selectbox(
             "出力フォーマット（形式変換）",
             list(OUTPUT_FORMATS.keys()),
-            index=1, label_visibility="collapsed", key="out_fmt_cvt"
+            index=3, label_visibility="collapsed", key="out_fmt_cvt"
         )
         OUT_FMT_CVT = OUTPUT_FORMATS[out_fmt_cvt_lbl]
 
@@ -1022,7 +1023,7 @@ with tab1:
                 unsafe_allow_html=True)
 
             map_rowsc, csv_rowsc = [], []
-            csv_hdrc = f"点名,緯度_入力({in_fmt_cvt_lbl}),経度_入力({in_fmt_cvt_lbl}),楕円体高h(m),緯度_出力({out_fmt_cvt_lbl}),経度_出力({out_fmt_cvt_lbl})"
+            # CSV統一フォーマット（ヘッダーなし）
 
             for i, pt in enumerate(pts_cvt):
                 if not (pt["lat"].strip() and pt["lon"].strip()):
@@ -1093,7 +1094,7 @@ with tab1:
             if map_rowsc:
                 st.markdown("#### 📍 地図")
                 render_map(map_rowsc, map_style_lbl, zoom=13)
-                csv_outc = "\ufeff" + csv_hdrc + "\n" + "\n".join(csv_rowsc)
+                csv_outc = "\n".join(csv_rowsc)
                 st.download_button("📥 全点 CSV ダウンロード", csv_outc, "converted_fmt.csv", "text/csv")
         else:
             st.info(f"緯度・経度を {in_fmt_cvt_lbl} 形式で入力してください。")
@@ -1104,143 +1105,158 @@ with tab1:
 # ═══════════════════════════════════════════════════════
 
 with tab2:
+    # 共通仕様:
+    # 入力CSV（ヘッダーなし）: A=点名, B=X(m), C=Y(m), D=Z標高(m), E=緯度, F=経度, G=楕円体高(m)
+    # 出力CSV（ヘッダーなし）: A=点名, B=X(m), C=Y(m), D=Z標高(m), E=緯度, F=経度, G=楕円体高(m)
+    # 変換方向に応じて入力不要な列は空欄でよい
+
     dir2 = st.radio("変換方向",
-                    ["平面直角 → 緯度経度（ヘッダーなし）","緯度経度 → 平面直角（ヘッダーあり）"],
+                    ["平面直角 → 緯度経度", "緯度経度 → 平面直角"],
                     horizontal=True, key="d2")
     st.markdown("---")
+
+    # CSV入出力フォーマット説明
+    st.markdown("""
+**CSVフォーマット（ヘッダーなし）**  
+`A列=点名, B列=X(m), C列=Y(m), D列=Z標高(m), E列=緯度, F列=経度, G列=楕円体高(m)`
+
+- 平面直角 → 緯度経度: **A〜D列を入力**（E〜G は自動計算して出力）
+- 緯度経度 → 平面直角: **A列+E〜G列を入力**（B〜D は自動計算して出力）
+    """)
+
     S1 = "t1,-42090.367,-23809.574,67.222\nt2,-42089.211,-23951.174,67.659\nt3,-42238.931,-23876.726,66.813"
-    S2 = "name,lat,lon,h,datum\npt1,35.68123,139.76712,10.5,JGD2011\npt2,34.69374,135.50218,5.2,JGD2011\npt3,38.26822,140.86940,52.3,JGD2011"
+    S2 = "pt1,,,,35.68123,139.76712,10.5\npt2,,,,34.69374,135.50218,5.2\npt3,,,,38.26822,140.86940,52.3"
 
-    if "平面直角" in dir2:
-        st.markdown("""
-**CSV フォーマット（ヘッダー行なし）**
-```
-点名,X(m),Y(m),標高Z(m)
-t1,-42090.367,-23809.574,67.222
-```
-標高列を入力するとジオイド高APIで楕円体高を自動計算します。
-        """)
-        up1 = st.file_uploader("CSVファイル",["csv","txt"],key="u1")
-        ca,cb = st.columns([3,1])
-        with ca: tx1 = st.text_area("または貼り付け",height=130,placeholder=S1,key="t1")
-        with cb:
-            if st.button("サンプル",key="s1"): st.session_state["t1"]=S1; st.rerun()
-        src = (up1.read().decode("utf-8-sig") if up1 else "") or (tx1 if tx1 else "")
+    up1 = st.file_uploader("CSVファイルをアップロード（または下のテキストエリアに貼り付け）",
+                            ["csv","txt"], key="u1")
+    ca, cb, cc_smp = st.columns([4, 1, 1])
+    with ca:
+        tx1 = st.text_area("貼り付け入力", height=130,
+                            placeholder=(S1 if "平面直角" in dir2 else S2), key="t1")
+    with cb:
+        if st.button("サンプルJPC", key="s1"):
+            st.session_state["t1"] = S1; st.rerun()
+    with cc_smp:
+        if st.button("サンプルLL", key="s1b"):
+            st.session_state["t1"] = S2; st.rerun()
 
-        if src.strip():
-            try:
-                df_in = pd.read_csv(io.StringIO(src), header=None, dtype=str)
-                rows = []
-                pb = st.progress(0, "変換中...")
-                total = len(df_in)
-                for idx,(_, row) in enumerate(df_in.iterrows()):
-                    pb.progress((idx+1)/total, f"{idx+1}/{total} 点処理中")
-                    try:
-                        name = str(row.iloc[0])
-                        X = float(row.iloc[1]); Y = float(row.iloc[2])
-                        elev = float(row.iloc[3]) if len(row)>3 and pd.notna(row.iloc[3]) else None
-                        res = jpc_to_latlon(X, Y, Z)
+    src = (up1.read().decode("utf-8-sig") if up1 else "") or (tx1 if tx1 else "")
+
+    if src.strip():
+        try:
+            # ヘッダーなしで読み込み（A〜G列固定）
+            df_in = pd.read_csv(io.StringIO(src), header=None, dtype=str)
+            # 列数に応じて補完（最低1列、最大7列）
+            while len(df_in.columns) < 7:
+                df_in[len(df_in.columns)] = ""
+
+            rows_out = []
+            pb = st.progress(0, "変換中...")
+            total = len(df_in)
+
+            for idx, (_, row) in enumerate(df_in.iterrows()):
+                pb.progress((idx+1)/total, f"{idx+1}/{total} 点処理中")
+                try:
+                    # 統一列読み込み
+                    name    = str(row.iloc[0]).strip()
+                    x_raw   = str(row.iloc[1]).strip()
+                    y_raw   = str(row.iloc[2]).strip()
+                    z_raw   = str(row.iloc[3]).strip()
+                    lat_raw = str(row.iloc[4]).strip()
+                    lon_raw = str(row.iloc[5]).strip()
+                    h_raw   = str(row.iloc[6]).strip()
+
+                    has_xy  = x_raw and y_raw and x_raw not in ("nan","") and y_raw not in ("nan","")
+                    has_ll  = lat_raw and lon_raw and lat_raw not in ("nan","") and lon_raw not in ("nan","")
+
+                    out_x = out_y = out_z = out_lat = out_lon = out_h = ""
+                    lat_dd = lon_dd = None
+
+                    if has_xy and (dir2 == "平面直角 → 緯度経度" or not has_ll):
+                        # 平面直角 → 緯度経度
+                        Xv = float(x_raw); Yv = float(y_raw)
+                        Zv = float(z_raw) if z_raw and z_raw != "nan" else None
+                        res = jpc_to_latlon(Xv, Yv, Z)
                         if res is None: raise ValueError(f"系番号 {Z} が無効")
                         lat_dd, lon_dd = res
-                        N=None; ellH=None
-                        if GEOID_KEY != "NONE" and elev is not None:
+                        N = None; ellH = None
+                        if GEOID_KEY != "NONE" and Zv is not None:
                             N = fetch_geoid(lat_dd, lon_dd, GEOID_KEY)
-                            if N is not None: ellH = elev + N
-                        rows.append({
-                            "点名":name,"X(m)":X,"Y(m)":Y,
-                            "標高Z(m)": f"{elev:.3f}" if elev is not None else "",
-                            "ジオイド高N(m)": f"{N:.4f}" if N is not None else "",
-                            "楕円体高h(m)": f"{ellH:.3f}" if ellH is not None else "",
-                            "緯度": format_angle(lat_dd, FMT),
-                            "経度": format_angle(lon_dd, FMT),
-                            "緯度_DD": fmt_decimal(lat_dd),
-                            "経度_DD": fmt_decimal(lon_dd),
-                            "_lat":lat_dd,"_lon":lon_dd,"_err":None,
-                        })
-                    except Exception as ex:
-                        rows.append({"点名":str(row.iloc[0]) if len(row)>0 else "?",
-                                     "_err":str(ex),"_lat":None,"_lon":None})
-                pb.empty()
-                dfr = pd.DataFrame(rows)
-                ok = dfr[dfr["_err"].isna()]; ng = dfr[dfr["_err"].notna()]
-                st.success(f"✅ {len(ok)} 点完了" + (f"　⚠️ {len(ng)} 件エラー" if len(ng) else ""))
-                if len(ng):
-                    with st.expander("⚠️ エラー"):
-                        for _, r in ng.iterrows():
-                            st.markdown(f"<span class='err'>❌ {r['点名']} — {r['_err']}</span>", unsafe_allow_html=True)
-                show = [c for c in ["点名","X(m)","Y(m)","標高Z(m)","ジオイド高N(m)","楕円体高h(m)","緯度","経度"] if c in ok.columns]
-                st.dataframe(ok[show], use_container_width=True, hide_index=True)
-                if ok["_lat"].notna().any():
-                    st.markdown("#### 📍 地図")
-                    map_pts = [{"name":r["点名"],"lat":r["_lat"],"lon":r["_lon"]}
-                               for _,r in ok[ok["_lat"].notna()].iterrows()]
-                    render_map(map_pts, map_style_lbl, zoom=9)
-                out = [c for c in ["点名","X(m)","Y(m)","標高Z(m)","ジオイド高N(m)","楕円体高h(m)","緯度","経度","緯度_DD","経度_DD"] if c in ok.columns]
-                st.download_button("📥 結果 CSV", "\ufeff"+ok[out].to_csv(index=False), "batch.csv","text/csv")
-            except Exception as ex:
-                st.error(f"処理エラー: {ex}")
-        else:
-            st.info("CSV をアップロードまたは貼り付けてください。")
+                            if N is not None: ellH = Zv + N
+                        out_x   = f"{Xv:.4f}"
+                        out_y   = f"{Yv:.4f}"
+                        out_z   = f"{Zv:.3f}" if Zv is not None else ""
+                        out_lat = format_angle(lat_dd, _FMT_DEFAULT)
+                        out_lon = format_angle(lon_dd, _FMT_DEFAULT)
+                        out_h   = f"{ellH:.3f}" if ellH is not None else ""
 
-    else:
-        st.markdown("""
-**CSV フォーマット（1行目ヘッダー必須）**
-```
-name,lat,lon,h,datum
-pt1,35.68123,139.76712,10.5,JGD2011
-```
-name / h / datum 列は省略可。lat・lon は十進角度（DD.DDDDDDDD）で入力してください。
-        """)
-        up2 = st.file_uploader("CSVファイル",["csv","txt"],key="u2")
-        cc,cd = st.columns([3,1])
-        with cc: tx2 = st.text_area("または貼り付け",height=130,placeholder=S2,key="t2")
-        with cd:
-            if st.button("サンプル",key="s2"): st.session_state["t2"]=S2; st.rerun()
-        src2 = (up2.read().decode("utf-8-sig") if up2 else "") or (tx2 if tx2 else "")
-
-        if src2.strip():
-            try:
-                df_in2 = pd.read_csv(io.StringIO(src2), dtype=str)
-                cols = [c.strip().lower() for c in df_in2.columns]
-                def ci(ns):
-                    for n in ns:
-                        if n in cols: return cols.index(n)
-                    return None
-                il=ci(["lat","緯度","latitude"]); iol=ci(["lon","lng","経度","longitude"])
-                ih=ci(["h","z","ellh","height","楕円体高"]); inm=ci(["name","点名","id","no"])
-                idt=ci(["datum","測地系"])
-                if il is None or iol is None:
-                    st.error("ヘッダーに 'lat' と 'lon' 列が必要です"); st.stop()
-                rows2 = []
-                for i, row in df_in2.iterrows():
-                    try:
-                        name = str(row.iloc[inm]) if inm is not None else str(i+1)
-                        lv   = float(row.iloc[il]); lov = float(row.iloc[iol])
-                        hv   = float(row.iloc[ih]) if ih is not None and pd.notna(row.iloc[ih]) else 0.0
-                        res  = latlon_to_jpc(lv, lov, Z)
+                    elif has_ll:
+                        # 緯度経度 → 平面直角
+                        lv  = float(lat_raw); lov = float(lon_raw)
+                        hv  = float(h_raw) if h_raw and h_raw != "nan" else 0.0
+                        res = latlon_to_jpc(lv, lov, Z)
                         if res is None: raise ValueError(f"系番号 {Z} が無効")
-                        px, py = res
-                        rows2.append({"点名":name,"緯度_入力":fmt_decimal(lv),"経度_入力":fmt_decimal(lov),
-                                      "楕円体高(m)":f"{hv:.3f}","X(m)":f"{px:.4f}","Y(m)":f"{py:.4f}",
-                                      "_lat":lv,"_lon":lov,"_err":None})
-                    except Exception as ex:
-                        rows2.append({"点名":str(row.iloc[inm]) if inm is not None else "?",
-                                      "_err":str(ex),"_lat":None,"_lon":None})
-                dfr2 = pd.DataFrame(rows2)
-                ok2 = dfr2[dfr2["_err"].isna()]; ng2 = dfr2[dfr2["_err"].notna()]
-                st.success(f"✅ {len(ok2)} 点完了" + (f"　⚠️ {len(ng2)} 件エラー" if len(ng2) else ""))
-                show2 = [c for c in ["点名","緯度_入力","経度_入力","楕円体高(m)","X(m)","Y(m)"] if c in ok2.columns]
-                st.dataframe(ok2[show2], use_container_width=True, hide_index=True)
-                if ok2["_lat"].notna().any():
-                    st.markdown("#### 📍 地図")
-                    map_pts2 = [{"name":r["点名"],"lat":r["_lat"],"lon":r["_lon"]}
-                                for _,r in ok2[ok2["_lat"].notna()].iterrows()]
-                    render_map(map_pts2, map_style_lbl, zoom=9)
-                st.download_button("📥 結果 CSV", "\ufeff"+ok2[show2].to_csv(index=False), "batch.csv","text/csv")
-            except Exception as ex:
-                st.error(f"処理エラー: {ex}")
-        else:
-            st.info("CSV をアップロードまたは貼り付けてください。")
+                        Xr, Yr = res
+                        lat_dd, lon_dd = lv, lov
+                        # 楕円体高→標高
+                        N_b = None; elev_b = None
+                        if h_raw and h_raw != "nan" and GEOID_KEY != "NONE":
+                            N_b = fetch_geoid(lv, lov, GEOID_KEY)
+                            if N_b is not None: elev_b = hv - N_b
+                        elif h_raw and h_raw != "nan":
+                            elev_b = hv
+                        out_x   = f"{Xr:.4f}"
+                        out_y   = f"{Yr:.4f}"
+                        out_z   = f"{elev_b:.3f}" if elev_b is not None else ""
+                        out_lat = format_angle(lv, _FMT_DEFAULT)
+                        out_lon = format_angle(lov, _FMT_DEFAULT)
+                        out_h   = f"{hv:.3f}" if h_raw and h_raw != "nan" else ""
+                    else:
+                        raise ValueError("X/Y または 緯度/経度 のいずれかが必要です")
+
+                    rows_out.append({
+                        "点名": name, "X(m)": out_x, "Y(m)": out_y,
+                        "Z標高(m)": out_z, "緯度": out_lat, "経度": out_lon,
+                        "楕円体高(m)": out_h,
+                        "_lat": lat_dd, "_lon": lon_dd, "_err": None,
+                    })
+                except Exception as ex:
+                    rows_out.append({"点名": str(row.iloc[0]) if len(row)>0 else "?",
+                                     "_err": str(ex), "_lat": None, "_lon": None})
+
+            pb.empty()
+            dfr = pd.DataFrame(rows_out)
+            ok  = dfr[dfr["_err"].isna()]
+            ng  = dfr[dfr["_err"].notna()]
+
+            st.success(f"✅ {len(ok)} 点完了" + (f"　⚠️ {len(ng)} 件エラー" if len(ng) else ""))
+            if len(ng):
+                with st.expander("⚠️ エラー詳細"):
+                    for _, r in ng.iterrows():
+                        st.markdown(f"<span class='err'>❌ {r['点名']} — {r['_err']}</span>",
+                                    unsafe_allow_html=True)
+
+            show = ["点名","X(m)","Y(m)","Z標高(m)","緯度","経度","楕円体高(m)"]
+            show = [c for c in show if c in ok.columns]
+            st.dataframe(ok[show], use_container_width=True, hide_index=True)
+
+            if ok["_lat"].notna().any():
+                st.markdown("#### 📍 地図")
+                map_pts = [{"name": r["点名"], "lat": r["_lat"], "lon": r["_lon"]}
+                           for _, r in ok[ok["_lat"].notna()].iterrows()]
+                render_map(map_pts, map_style_lbl, zoom=9)
+
+            # 出力CSV（ヘッダーなし: 点名,X,Y,Z,緯度,経度,楕円体高）
+            csv_lines = [",".join([
+                r["点名"], r["X(m)"], r["Y(m)"], r["Z標高(m)"],
+                r["緯度"], r["経度"], r["楕円体高(m)"]
+            ]) for _, r in ok.iterrows()]
+            st.download_button("📥 結果 CSV（ヘッダーなし）", "\n".join(csv_lines), "batch_result.csv", "text/csv")
+
+        except Exception as ex:
+            st.error(f"処理エラー: {ex}")
+    else:
+        st.info("CSV をアップロードまたは貼り付けてください。")
 
 # ═══════════════════════════════════════════════════════
 # 11. TAB 3: 系番号一覧
