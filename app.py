@@ -21,6 +21,8 @@ DEG = math.pi / 180
 RAD = 180 / math.pi
 
 DATUMS = {
+    "JGD2024": {"label": "JGD2024（測地成果2024）",   "a": 6378137.0,   "f": 1/298.257222101,
+                "toWGS84": {"dx":0,"dy":0,"dz":0,"rx":0,"ry":0,"rz":0,"ds":0}},
     "JGD2011": {"label": "JGD2011（測地成果2011）",   "a": 6378137.0,   "f": 1/298.257222101,
                 "toWGS84": {"dx":0,"dy":0,"dz":0,"rx":0,"ry":0,"rz":0,"ds":0}},
     "JGD2000": {"label": "JGD2000（測地成果2000）",   "a": 6378137.0,   "f": 1/298.257222101,
@@ -30,6 +32,9 @@ DATUMS = {
     "TOKYO":   {"label": "旧日本測地系（Tokyo97）",   "a": 6377397.155, "f": 1/299.1528128,
                 "toWGS84": {"dx":-148,"dy":507,"dz":685,"rx":0,"ry":0,"rz":0,"ds":0}},
 }
+# JGD2024 補足: 測地成果2024（令和6年告示）
+# JGD2011との差は数cm以内。準拠楕円体はGRS80（JGD2011と同一）。
+# 実用上はJGD2011と同パラメータで問題なし（プレート運動補正は別途必要な場合のみ）。
 
 JPC_ORIGINS = {
      1:(33.0,129.5),        2:(33.0,131.0),        3:(36.0,132.166666667),
@@ -632,7 +637,7 @@ with tab1:
         if has_input:
             st.markdown("<div class='sec-label'>変換結果</div>", unsafe_allow_html=True)
             map_rows, csv_rows = [], []
-            csv_hdr = f"点名,X(m),Y(m),Z標高(m),ジオイド高N(m),楕円体高h(m),緯度({out_fmt_jpc_lbl}),経度({out_fmt_jpc_lbl}),緯度_DD,経度_DD"
+            csv_hdr = f"点名,X(m),Y(m),Z標高(m),ジオイド高N(m),楕円体高h(m),緯度_{out_fmt_jpc_lbl},経度_{out_fmt_jpc_lbl}"
 
             for i, pt in enumerate(pts):
                 if not (pt["x"].strip() and pt["y"].strip()):
@@ -704,8 +709,7 @@ with tab1:
                         + (f"{Zv:.3f}" if Zv is not None else "") + ","
                         + (f"{N:.4f}"  if N  is not None else "") + ","
                         + (f"{ellH:.3f}" if ellH is not None else "") + ","
-                        + f"{format_angle(lat_dd,FMT_JPC)},{format_angle(lon_dd,FMT_JPC)},"
-                        + f"{fmt_decimal(lat_dd)},{fmt_decimal(lon_dd)}"
+                        + f"{format_angle(lat_dd,FMT_JPC)},{format_angle(lon_dd,FMT_JPC)}"
                     )
                 except (ValueError, Exception) as ex:
                     st.error(f"[{pt['name']}] エラー: {ex}")
@@ -735,15 +739,6 @@ with tab1:
         IN_FMT = OUTPUT_FORMATS[in_fmt_lbl]
         ph_lat = FORMAT_PLACEHOLDER[IN_FMT]
         ph_lon = FORMAT_PLACEHOLDER[IN_FMT].replace("35","139").replace("40","47")
-
-        # 出力フォーマット選択（入力フォーマットのすぐ下）
-        st.markdown("<div class='sec-label'>出力フォーマット（緯度経度・参照用）</div>", unsafe_allow_html=True)
-        out_fmt_ll_lbl = st.selectbox(
-            "出力フォーマットLL",
-            list(OUTPUT_FORMATS.keys()),
-            index=0, label_visibility="collapsed", key="out_fmt_ll"
-        )
-        FMT_LL = OUTPUT_FORMATS[out_fmt_ll_lbl]
 
         col_add2, col_clr2, col_swap2, _ = st.columns([1,1,1.4,4])
         with col_add2:
@@ -907,9 +902,10 @@ with tab1:
     else:  # dir1 == "緯度経度 形式変換"
         # session_state 初期化
         if "pts_cvt" not in st.session_state:
-            st.session_state["pts_cvt"] = [{"name":"pt1","lat":"","lon":""}]
+            st.session_state["pts_cvt"] = [{"name":"pt1","lat":"","lon":"","h":""}]
         for i, pt in enumerate(st.session_state["pts_cvt"]):
-            for f,v in [("name",pt["name"]),("lat",pt["lat"]),("lon",pt["lon"])]:
+            for f,v in [("name",pt.get("name","")),("lat",pt.get("lat","")),
+                        ("lon",pt.get("lon","")),("h",pt.get("h",""))]:
                 k = f"cvt_{f}_{i}"
                 if k not in st.session_state:
                     st.session_state[k] = v
@@ -939,11 +935,11 @@ with tab1:
         with col_add_c:
             if st.button("＋ 点を追加", key="add_cvt"):
                 for i, pt in enumerate(st.session_state["pts_cvt"]):
-                    for f in ("name","lat","lon"):
+                    for f in ("name","lat","lon","h"):
                         k = f"cvt_{f}_{i}"
                         if k in st.session_state: pt[f] = st.session_state[k]
                 n = len(st.session_state["pts_cvt"]) + 1
-                st.session_state["pts_cvt"].append({"name":f"pt{n}","lat":"","lon":""})
+                st.session_state["pts_cvt"].append({"name":f"pt{n}","lat":"","lon":"","h":""})
                 st.rerun()
         with col_clr_c:
             if st.button("🗑 全クリア", key="clr_cvt"):
@@ -954,7 +950,7 @@ with tab1:
         with col_swap_c:
             if st.button("⇄ 緯↔経 入替", key="swap_cvt"):
                 for i, pt in enumerate(st.session_state["pts_cvt"]):
-                    for f in ("name","lat","lon"):
+                    for f in ("name","lat","lon","h"):
                         k = f"cvt_{f}_{i}"
                         if k in st.session_state: pt[f] = st.session_state[k]
                 for i, pt in enumerate(st.session_state["pts_cvt"]):
@@ -969,7 +965,7 @@ with tab1:
         pts_cvt = st.session_state["pts_cvt"]
         del_idx_c = None
         for i, pt in enumerate(pts_cvt):
-            c0,c1,c2,c3,c4 = st.columns([0.6,1.4,2.5,2.5,0.45])
+            c0,c1,c2,c3,c4,c5 = st.columns([0.6,1.4,2,2,1.6,0.45])
             with c0:
                 toppad = "32" if i==0 else "8"
                 st.markdown(
@@ -989,6 +985,10 @@ with tab1:
                     placeholder=ph_cvt_lon, key=f"cvt_lon_{i}",
                     label_visibility="visible" if i==0 else "collapsed")
             with c4:
+                st.text_input("楕円体高 h (m)" if i==0 else "h(m)",
+                              placeholder="89.555", key=f"cvt_h_{i}",
+                              label_visibility="visible" if i==0 else "collapsed")
+            with c5:
                 if i == 0:
                     st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
                 if st.button("✕", key=f"del_cvt_{i}", disabled=len(pts_cvt)==1):
@@ -996,18 +996,18 @@ with tab1:
 
         if del_idx_c is not None:
             for i, pt in enumerate(st.session_state["pts_cvt"]):
-                for f in ("name","lat","lon"):
+                for f in ("name","lat","lon","h"):
                     k = f"cvt_{f}_{i}"
                     if k in st.session_state: pt[f] = st.session_state[k]
             new_pts_c = [p for j,p in enumerate(st.session_state["pts_cvt"]) if j != del_idx_c]
-            for k in [k for k in st.session_state if k.startswith("cvt_name_") or k.startswith("cvt_lat_") or k.startswith("cvt_lon_")]:
+            for k in [k for k in st.session_state if k.startswith("cvt_name_") or k.startswith("cvt_lat_") or k.startswith("cvt_lon_") or k.startswith("cvt_h_")]:
                 del st.session_state[k]
             st.session_state["pts_cvt"] = new_pts_c
             st.rerun()
 
         # 現在値を同期
         for i, pt in enumerate(pts_cvt):
-            for f in ("name","lat","lon"):
+            for f in ("name","lat","lon","h"):
                 k = f"cvt_{f}_{i}"
                 if k in st.session_state: pt[f] = st.session_state[k]
 
@@ -1022,7 +1022,7 @@ with tab1:
                 unsafe_allow_html=True)
 
             map_rowsc, csv_rowsc = [], []
-            csv_hdrc = f"点名,緯度_入力({in_fmt_cvt_lbl}),経度_入力({in_fmt_cvt_lbl}),緯度_出力({out_fmt_cvt_lbl}),経度_出力({out_fmt_cvt_lbl}),緯度_DD,経度_DD"
+            csv_hdrc = f"点名,緯度_入力({in_fmt_cvt_lbl}),経度_入力({in_fmt_cvt_lbl}),楕円体高h(m),緯度_出力({out_fmt_cvt_lbl}),経度_出力({out_fmt_cvt_lbl})"
 
             for i, pt in enumerate(pts_cvt):
                 if not (pt["lat"].strip() and pt["lon"].strip()):
@@ -1042,7 +1042,10 @@ with tab1:
                         f"{pt['name']}</div>",
                         unsafe_allow_html=True)
 
-                    rc1,rc2 = st.columns(2)
+                    h_cvt_raw = st.session_state.get(f"cvt_h_{i}", "")
+                    h_cvt_v = float(h_cvt_raw) if h_cvt_raw.strip() else None
+
+                    rc1,rc2,rc3 = st.columns(3)
                     with rc1:
                         st.markdown(
                             f"<div class='rc'><div class='rc-lbl' style='color:#3b82f6'>緯度 LAT</div>"
@@ -1055,6 +1058,14 @@ with tab1:
                             f"<div class='rc-val'>{lon_out}</div>"
                             f"<div class='rc-sub'>{fmt_decimal(lon_dd)} deg</div></div>",
                             unsafe_allow_html=True)
+                    with rc3:
+                        hc_str = f"{h_cvt_v:.3f} m" if h_cvt_v is not None else "---"
+                        hc_sub = "楕円体高（そのまま）" if h_cvt_v is not None else "未入力"
+                        st.markdown(
+                            f"<div class='rc'><div class='rc-lbl' style='color:#8b5cf6'>楕円体高 h (m)</div>"
+                            f"<div class='rc-val'>{hc_str}</div>"
+                            f"<div class='rc-sub'>{hc_sub}</div></div>",
+                            unsafe_allow_html=True)
 
                     with st.expander(f"🔢 {pt['name']} 全フォーマット"):
                         st.dataframe(pd.DataFrame([
@@ -1064,11 +1075,17 @@ with tab1:
 
                     st.markdown("</div>", unsafe_allow_html=True)
 
+                    h_cvt_raw2 = st.session_state.get(f"cvt_h_{i}", "")
+                    h_cvt_v2 = float(h_cvt_raw2) if h_cvt_raw2.strip() else None
+                    tip_h = f" / h={h_cvt_v2:.3f}m" if h_cvt_v2 is not None else ""
                     map_rowsc.append({"name":pt["name"],"lat":lat_dd,"lon":lon_dd,
-                                      "tooltip":f"{lat_out} / {lon_out}"})
+                                      "tooltip":f"{lat_out} / {lon_out}{tip_h}"})
+                    h_cvt = st.session_state.get(f"cvt_h_{i}", "")
+                    h_cvt_val = float(h_cvt) if h_cvt.strip() else ""
                     csv_rowsc.append(
-                        f"{pt['name']},{pt['lat']},{pt['lon']},{lat_out},{lon_out},"
-                        + f"{fmt_decimal(lat_dd)},{fmt_decimal(lon_dd)}"
+                        f"{pt['name']},{pt['lat']},{pt['lon']},"
+                        + (f"{h_cvt_val:.3f}" if isinstance(h_cvt_val, float) else "") + ","
+                        + f"{lat_out},{lon_out}"
                     )
                 except (ValueError, Exception) as ex:
                     st.error(f"[{pt['name']}] エラー: {ex}")
@@ -1250,4 +1267,5 @@ with tab3:
 - 変換精度: **往復誤差 < 0.01 mm**
 - ジオイド高: **国土地理院API**（JPGEO2024 / JPGEO2011）
 - 旧日本測地系: Helmert 3パラメータ（Δx=−148, Δy=+507, Δz=+685 m）
+- **JGD2024**（測地成果2024）: GRS80楕円体・JGD2011と同準拠楕円体。令和6年告示。実用的にはJGD2011と同等の精度で利用可能。
     """)
