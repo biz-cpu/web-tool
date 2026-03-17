@@ -1299,36 +1299,56 @@ with tab1:
 # ═══════════════════════════════════════════════════════
 
 with tab2:
-    # 共通仕様:
-    # 入力CSV（ヘッダーなし）: A=点名, B=X(m), C=Y(m), D=Z標高(m), E=緯度, F=経度, G=楕円体高(m)
-    # 出力CSV（ヘッダーなし）: A=点名, B=X(m), C=Y(m), D=Z標高(m), E=緯度, F=経度, G=楕円体高(m)
-    # 変換方向に応じて入力不要な列は空欄でよい
-
     dir2 = st.radio("変換方向",
                     ["平面直角 → 緯度経度", "緯度経度 → 平面直角"],
                     horizontal=True, key="d2")
     st.markdown("---")
 
-    # CSV入出力フォーマット説明
-    st.markdown("""
-**CSVフォーマット**  
-`A列=点名, B列=X(m), C列=Y(m), D列=Z標高(m), E列=緯度, F列=経度, G列=楕円体高(m)`
+    # ── 変換方向ごとの入力フォーマット説明 ──────────────────
+    if dir2 == "平面直角 → 緯度経度":
+        st.markdown("""
+<div style='background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px 16px;margin-bottom:12px'>
+<div style='font-size:12px;font-weight:700;color:#0369a1;margin-bottom:6px'>📥 入力CSVフォーマット（ヘッダーなし・4列固定）</div>
+<code style='font-size:12px'>A列=点名　B列=X(m)　C列=Y(m)　D列=Z標高(m)</code>
+<div style='font-size:11px;color:#64748b;margin-top:6px'>
+・D列（Z標高）は省略可（空欄でもOK）<br>
+・5列目以降は無視されます
+</div>
+</div>
+<div style='background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 16px'>
+<div style='font-size:12px;font-weight:700;color:#15803d;margin-bottom:6px'>📤 出力CSVフォーマット（ヘッダーなし・7列）</div>
+<code style='font-size:12px'>A列=点名　B列=X(m)　C列=Y(m)　D列=Z標高(m)　E列=緯度　F列=経度　G列=楕円体高(m)</code>
+</div>
+""", unsafe_allow_html=True)
+    else:
+        st.markdown("""
+<div style='background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px 16px;margin-bottom:12px'>
+<div style='font-size:12px;font-weight:700;color:#0369a1;margin-bottom:6px'>📥 入力CSVフォーマット（ヘッダーなし・4列固定）</div>
+<code style='font-size:12px'>A列=点名　B列=緯度　C列=経度　D列=楕円体高(m)</code>
+<div style='font-size:11px;color:#64748b;margin-top:6px'>
+・D列（楕円体高）は省略可（空欄でもOK）<br>
+・緯度・経度は十進角度（DD.DDDDDDDD）で入力<br>
+・5列目以降は無視されます
+</div>
+</div>
+<div style='background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 16px'>
+<div style='font-size:12px;font-weight:700;color:#15803d;margin-bottom:6px'>📤 出力CSVフォーマット（ヘッダーなし・7列）</div>
+<code style='font-size:12px'>A列=点名　B列=X(m)　C列=Y(m)　D列=Z標高(m)　E列=緯度　F列=経度　G列=楕円体高(m)</code>
+</div>
+""", unsafe_allow_html=True)
 
-- 平面直角 → 緯度経度: **A〜D列を入力**（E〜G は自動計算して出力）
-- 緯度経度 → 平面直角: **A列+E〜G列を入力**（B〜D は自動計算して出力）
-    """)
-
-    up1 = st.file_uploader("CSVファイルをアップロード",
-                            ["csv","txt"], key="u1")
+    st.markdown("")
+    up1 = st.file_uploader("CSVファイルをアップロード", ["csv","txt"], key="u1")
 
     src = up1.read().decode("utf-8-sig") if up1 else ""
 
     if src.strip():
         try:
-            # ヘッダーなしで読み込み（A〜G列固定）
-            df_in = pd.read_csv(io.StringIO(src), header=None, dtype=str)
-            # 列数に応じて補完（最低1列、最大7列）
-            while len(df_in.columns) < 7:
+            # ヘッダーなしで読み込み（先頭4列のみ使用）
+            df_in = pd.read_csv(io.StringIO(src), header=None, dtype=str,
+                                usecols=range(min(4, sum(1 for _ in io.StringIO(src).readline().split(",")))))
+            # 4列未満の場合は空列で補完
+            while len(df_in.columns) < 4:
                 df_in[len(df_in.columns)] = ""
 
             rows_out = []
@@ -1338,25 +1358,25 @@ with tab2:
             for idx, (_, row) in enumerate(df_in.iterrows()):
                 pb.progress((idx+1)/total, f"{idx+1}/{total} 点処理中")
                 try:
-                    # 統一列読み込み
-                    name    = str(row.iloc[0]).strip()
-                    x_raw   = str(row.iloc[1]).strip()
-                    y_raw   = str(row.iloc[2]).strip()
-                    z_raw   = str(row.iloc[3]).strip()
-                    lat_raw = str(row.iloc[4]).strip()
-                    lon_raw = str(row.iloc[5]).strip()
-                    h_raw   = str(row.iloc[6]).strip()
+                    # A〜D列のみ読み込み（5列目以降は無視）
+                    name  = str(row.iloc[0]).strip()
+                    col_b = str(row.iloc[1]).strip() if len(row) > 1 else ""
+                    col_c = str(row.iloc[2]).strip() if len(row) > 2 else ""
+                    col_d = str(row.iloc[3]).strip() if len(row) > 3 else ""
 
-                    has_xy  = x_raw and y_raw and x_raw not in ("nan","") and y_raw not in ("nan","")
-                    has_ll  = lat_raw and lon_raw and lat_raw not in ("nan","") and lon_raw not in ("nan","")
+                    # nan文字列を空欄扱いに統一
+                    def _v(s): return "" if s.lower() in ("nan","none","") else s
+                    col_b, col_c, col_d = _v(col_b), _v(col_c), _v(col_d)
 
                     out_x = out_y = out_z = out_lat = out_lon = out_h = ""
                     lat_dd = lon_dd = None
 
-                    if has_xy and (dir2 == "平面直角 → 緯度経度" or not has_ll):
-                        # 平面直角 → 緯度経度
-                        Xv = float(x_raw); Yv = float(y_raw)
-                        Zv = float(z_raw) if z_raw and z_raw != "nan" else None
+                    if dir2 == "平面直角 → 緯度経度":
+                        # B=X C=Y D=Z標高
+                        if not (col_b and col_c):
+                            raise ValueError("B列(X)・C列(Y)が必要です")
+                        Xv = float(col_b); Yv = float(col_c)
+                        Zv = float(col_d) if col_d else None
                         res = jpc_to_latlon(Xv, Yv, Z)
                         if res is None: raise ValueError(f"系番号 {Z} が無効")
                         lat_dd, lon_dd = res
@@ -1364,36 +1384,38 @@ with tab2:
                         if GEOID_KEY != "NONE" and Zv is not None:
                             N = fetch_geoid(lat_dd, lon_dd, GEOID_KEY)
                             if N is not None: ellH = Zv + N
+                        elif Zv is not None:
+                            ellH = Zv
                         out_x   = f"{Xv:.4f}"
                         out_y   = f"{Yv:.4f}"
                         out_z   = f"{Zv:.3f}" if Zv is not None else ""
-                        out_lat = format_angle(lat_dd, _FMT_DEFAULT)
-                        out_lon = format_angle(lon_dd, _FMT_DEFAULT)
+                        out_lat = fmt_decimal(lat_dd)
+                        out_lon = fmt_decimal(lon_dd)
                         out_h   = f"{ellH:.3f}" if ellH is not None else ""
 
-                    elif has_ll:
-                        # 緯度経度 → 平面直角
-                        lv  = float(lat_raw); lov = float(lon_raw)
-                        hv  = float(h_raw) if h_raw and h_raw != "nan" else 0.0
+                    else:
+                        # B=緯度 C=経度 D=楕円体高
+                        if not (col_b and col_c):
+                            raise ValueError("B列(緯度)・C列(経度)が必要です")
+                        lv  = float(col_b); lov = float(col_c)
+                        hv  = float(col_d) if col_d else None
                         res = latlon_to_jpc(lv, lov, Z)
                         if res is None: raise ValueError(f"系番号 {Z} が無効")
                         Xr, Yr = res
                         lat_dd, lon_dd = lv, lov
-                        # 楕円体高→標高
-                        N_b = None; elev_b = None
-                        if h_raw and h_raw != "nan" and GEOID_KEY != "NONE":
+                        # 楕円体高 → Z標高（h - N）
+                        elev_b = None
+                        if hv is not None and GEOID_KEY != "NONE":
                             N_b = fetch_geoid(lv, lov, GEOID_KEY)
                             if N_b is not None: elev_b = hv - N_b
-                        elif h_raw and h_raw != "nan":
-                            elev_b = hv
+                        elif hv is not None:
+                            elev_b = hv  # 補正なしの場合そのまま
                         out_x   = f"{Xr:.4f}"
                         out_y   = f"{Yr:.4f}"
                         out_z   = f"{elev_b:.3f}" if elev_b is not None else ""
-                        out_lat = format_angle(lv, _FMT_DEFAULT)
-                        out_lon = format_angle(lov, _FMT_DEFAULT)
-                        out_h   = f"{hv:.3f}" if h_raw and h_raw != "nan" else ""
-                    else:
-                        raise ValueError("X/Y または 緯度/経度 のいずれかが必要です")
+                        out_lat = fmt_decimal(lv)
+                        out_lon = fmt_decimal(lov)
+                        out_h   = f"{hv:.3f}" if hv is not None else ""
 
                     rows_out.append({
                         "点名": name, "X(m)": out_x, "Y(m)": out_y,
@@ -1402,13 +1424,15 @@ with tab2:
                         "_lat": lat_dd, "_lon": lon_dd, "_err": None,
                     })
                 except Exception as ex:
-                    rows_out.append({"点名": str(row.iloc[0]) if len(row)>0 else "?",
-                                     "_err": str(ex), "_lat": None, "_lon": None})
+                    rows_out.append({
+                        "点名": str(row.iloc[0]) if len(row) > 0 else "?",
+                        "_err": str(ex), "_lat": None, "_lon": None,
+                    })
 
             pb.empty()
             dfr = pd.DataFrame(rows_out)
-            ok  = dfr[dfr["_err"].isna()]
-            ng  = dfr[dfr["_err"].notna()]
+            ok = dfr[dfr["_err"].isna()]
+            ng = dfr[dfr["_err"].notna()]
 
             st.success(f"✅ {len(ok)} 点完了" + (f"　⚠️ {len(ng)} 件エラー" if len(ng) else ""))
             if len(ng):
@@ -1427,17 +1451,24 @@ with tab2:
                            for _, r in ok[ok["_lat"].notna()].iterrows()]
                 render_map(map_pts, map_style_lbl, zoom=9)
 
-            # 出力CSV（ヘッダーなし: 点名,X,Y,Z,緯度,経度,楕円体高）
-            csv_lines = [",".join([
-                r["点名"], r["X(m)"], r["Y(m)"], r["Z標高(m)"],
-                r["緯度"], r["経度"], r["楕円体高(m)"]
-            ]) for _, r in ok.iterrows()]
-            st.download_button("📥 結果 CSV（ヘッダーなし）", "\n".join(csv_lines), "batch_result.csv", "text/csv")
+            # 出力CSV（ヘッダーなし: A=点名,B=X,C=Y,D=Z標高,E=緯度,F=経度,G=楕円体高）
+            csv_lines = [
+                ",".join([
+                    r["点名"], r["X(m)"], r["Y(m)"], r["Z標高(m)"],
+                    r["緯度"], r["経度"], r["楕円体高(m)"],
+                ])
+                for _, r in ok.iterrows()
+            ]
+            st.download_button(
+                "📥 結果 CSV ダウンロード",
+                "\n".join(csv_lines),
+                "batch_result.csv", "text/csv"
+            )
 
         except Exception as ex:
             st.error(f"処理エラー: {ex}")
     else:
-        st.info("CSV をアップロードまたは貼り付けてください。")
+        st.info("CSVファイルをアップロードしてください。")
 
 # ═══════════════════════════════════════════════════════
 # 11. TAB 3: 系番号一覧
