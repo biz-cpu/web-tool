@@ -1134,24 +1134,10 @@ with tab2:
 - 緯度経度 → 平面直角: **A列+E〜G列を入力**（B〜D は自動計算して出力）
     """)
 
-    S1 = "t1,-42090.367,-23809.574,67.222\nt2,-42089.211,-23951.174,67.659\nt3,-42238.931,-23876.726,66.813"
-    S2 = "pt1,,,,35.68123,139.76712,10.5\npt2,,,,34.69374,135.50218,5.2\npt3,,,,38.26822,140.86940,52.3"
-
-    up1 = st.file_uploader("CSVファイルをアップロード（または下のテキストエリアに貼り付け）",
+    up1 = st.file_uploader("CSVファイルをアップロード",
                             ["csv","txt"], key="u1")
-    ca, cb, cc_smp = st.columns([4, 1, 1])
-    with ca:
-        _ph = S1 if dir2 == "平面直角 → 緯度経度" else S2
-        tx1 = st.text_area("貼り付け入力", height=130,
-                            placeholder=_ph, key="t1")
-    with cb:
-        if st.button("サンプルJPC", key="s1"):
-            st.session_state["t1"] = S1; st.rerun()
-    with cc_smp:
-        if st.button("サンプルLL", key="s1b"):
-            st.session_state["t1"] = S2; st.rerun()
 
-    src = (up1.read().decode("utf-8-sig") if up1 else "") or (tx1 if tx1 else "")
+    src = up1.read().decode("utf-8-sig") if up1 else ""
 
     if src.strip():
         try:
