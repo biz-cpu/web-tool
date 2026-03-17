@@ -449,14 +449,6 @@ section[data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"]{ga
 
     st.divider()
 
-    # 出力フォーマット
-    st.markdown("<div style='font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:.12em;text-transform:uppercase;margin-bottom:3px'>📐 出力フォーマット</div>", unsafe_allow_html=True)
-    fmt_lbl = st.selectbox("出力フォーマット", list(OUTPUT_FORMATS.keys()),
-                            index=0, label_visibility="collapsed")
-    FMT = OUTPUT_FORMATS[fmt_lbl]
-
-    st.divider()
-
     # 地図スタイル
     st.markdown("<div style='font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:.12em;text-transform:uppercase;margin-bottom:3px'>🗺️ 地図スタイル</div>", unsafe_allow_html=True)
     map_style_lbl = st.selectbox("地図スタイル", list(MAP_STYLES.keys()),
@@ -473,10 +465,14 @@ GRS80 / m₀=0.9999 / Kawase2011
 # 8. メインヘッダー
 # ═══════════════════════════════════════════════════════
 
+# FMT/fmt_lbl はTAB内の各モードで個別に定義するため、ここではデフォルトのみ設定
+_FMT_DEFAULT = "decimal"
+_fmt_lbl_default = list(OUTPUT_FORMATS.keys())[0]
+
 st.markdown(f"""
 <div class="app-hdr">
   <h1>📐 ローカライゼーション用座標変換</h1>
-  <p>第 {Z} 系 &nbsp;·&nbsp; {datum_lbl} &nbsp;·&nbsp; {fmt_lbl} &nbsp;·&nbsp; {map_style_lbl}</p>
+  <p>第 {Z} 系 &nbsp;·&nbsp; {datum_lbl} &nbsp;·&nbsp; {map_style_lbl}</p>
 </div>""", unsafe_allow_html=True)
 
 tab1, tab2, tab3 = st.tabs(["📍 単点変換", "📋 CSV 一括変換", "ℹ️ 系番号一覧"])
@@ -552,7 +548,7 @@ def _swap_ll():
 # ─────────────────────────────────────────────────────────
 with tab1:
     dir1 = st.radio("変換方向",
-                    ["平面直角 → 緯度経度", "緯度経度 → 平面直角"],
+                    ["平面直角 → 緯度経度", "緯度経度 → 平面直角", "緯度経度 形式変換"],
                     horizontal=True, key="d1")
     st.markdown("---")
 
@@ -621,13 +617,22 @@ with tab1:
         # 最新値を読み取り
         pts = _read_jpc()
 
+        # 出力フォーマット選択（入力欄のすぐ下）
+        st.markdown("<div class='sec-label'>出力フォーマット（緯度・経度）</div>", unsafe_allow_html=True)
+        out_fmt_jpc_lbl = st.selectbox(
+            "出力フォーマットJPC",
+            list(OUTPUT_FORMATS.keys()),
+            index=0, label_visibility="collapsed", key="out_fmt_jpc"
+        )
+        FMT_JPC = OUTPUT_FORMATS[out_fmt_jpc_lbl]
+
         st.markdown("---")
         has_input = any(pt["x"].strip() and pt["y"].strip() for pt in pts)
 
         if has_input:
             st.markdown("<div class='sec-label'>変換結果</div>", unsafe_allow_html=True)
             map_rows, csv_rows = [], []
-            csv_hdr = f"点名,X(m),Y(m),Z標高(m),ジオイド高N(m),楕円体高h(m),緯度({fmt_lbl}),経度({fmt_lbl}),緯度_DD,経度_DD"
+            csv_hdr = f"点名,X(m),Y(m),Z標高(m),ジオイド高N(m),楕円体高h(m),緯度({out_fmt_jpc_lbl}),経度({out_fmt_jpc_lbl}),緯度_DD,経度_DD"
 
             for i, pt in enumerate(pts):
                 if not (pt["x"].strip() and pt["y"].strip()):
@@ -666,13 +671,13 @@ with tab1:
                     with rc1:
                         st.markdown(
                             f"<div class='rc'><div class='rc-lbl' style='color:#3b82f6'>緯度 LAT</div>"
-                            f"<div class='rc-val'>{format_angle(lat_dd,FMT)}</div>"
+                            f"<div class='rc-val'>{format_angle(lat_dd,FMT_JPC)}</div>"
                             f"<div class='rc-sub'>{fmt_decimal(lat_dd)} deg</div></div>",
                             unsafe_allow_html=True)
                     with rc2:
                         st.markdown(
                             f"<div class='rc'><div class='rc-lbl' style='color:#10b981'>経度 LON</div>"
-                            f"<div class='rc-val'>{format_angle(lon_dd,FMT)}</div>"
+                            f"<div class='rc-val'>{format_angle(lon_dd,FMT_JPC)}</div>"
                             f"<div class='rc-sub'>{fmt_decimal(lon_dd)} deg</div></div>",
                             unsafe_allow_html=True)
                     with rc3:
@@ -699,7 +704,7 @@ with tab1:
                         + (f"{Zv:.3f}" if Zv is not None else "") + ","
                         + (f"{N:.4f}"  if N  is not None else "") + ","
                         + (f"{ellH:.3f}" if ellH is not None else "") + ","
-                        + f"{format_angle(lat_dd,FMT)},{format_angle(lon_dd,FMT)},"
+                        + f"{format_angle(lat_dd,FMT_JPC)},{format_angle(lon_dd,FMT_JPC)},"
                         + f"{fmt_decimal(lat_dd)},{fmt_decimal(lon_dd)}"
                     )
                 except (ValueError, Exception) as ex:
@@ -716,20 +721,29 @@ with tab1:
     # ══════════════════════════════
     # 緯度経度 → 平面直角
     # ══════════════════════════════
-    else:
+    elif dir1 == "緯度経度 → 平面直角":
         _init_ll()
 
         st.markdown("<div class='sec-label'>入力フォーマット（緯度・経度）</div>", unsafe_allow_html=True)
         in_fmt_lbl = st.selectbox(
             "入力フォーマット",
             list(OUTPUT_FORMATS.keys()),
-            index=list(OUTPUT_FORMATS.keys()).index(fmt_lbl),
+            index=0,
             label_visibility="collapsed",
             key="in_fmt_ll",
         )
         IN_FMT = OUTPUT_FORMATS[in_fmt_lbl]
         ph_lat = FORMAT_PLACEHOLDER[IN_FMT]
         ph_lon = FORMAT_PLACEHOLDER[IN_FMT].replace("35","139").replace("40","47")
+
+        # 出力フォーマット選択（入力フォーマットのすぐ下）
+        st.markdown("<div class='sec-label'>出力フォーマット（緯度経度・参照用）</div>", unsafe_allow_html=True)
+        out_fmt_ll_lbl = st.selectbox(
+            "出力フォーマットLL",
+            list(OUTPUT_FORMATS.keys()),
+            index=0, label_visibility="collapsed", key="out_fmt_ll"
+        )
+        FMT_LL = OUTPUT_FORMATS[out_fmt_ll_lbl]
 
         col_add2, col_clr2, col_swap2, _ = st.columns([1,1,1.4,4])
         with col_add2:
@@ -797,7 +811,7 @@ with tab1:
         if has_input2:
             st.markdown("<div class='sec-label'>変換結果</div>", unsafe_allow_html=True)
             map_rows2, csv_rows2 = [], []
-            csv_hdr2 = "点名,緯度_入力,経度_入力,楕円体高(m),X(m),Y(m),系番号"
+            csv_hdr2 = "点名,緯度_入力,経度_入力,楕円体高h(m),X(m),Y(m),Z標高(m),系番号"
 
             for i, pt in enumerate(pts2):
                 if not (pt["lat"].strip() and pt["lon"].strip()):
@@ -811,13 +825,28 @@ with tab1:
                         st.error(f"[{pt['name']}] 系番号 {Z} が無効"); continue
                     Xr, Yr = res
 
+                    # 楕円体高 → 標高: ジオイド高を差し引く
+                    N_ll = None; elev_ll = None; geoid_status_ll = ""
+                    if pt["h"].strip():
+                        if GEOID_KEY != "NONE":
+                            with st.spinner(f"[{pt['name']}] ジオイド高 取得中..."):
+                                N_ll = fetch_geoid(lv, lov, GEOID_KEY)
+                            if N_ll is not None:
+                                elev_ll = hv - N_ll
+                                geoid_status_ll = f"<span class='geoid-ok'>N={N_ll:.4f} m</span>"
+                            else:
+                                geoid_status_ll = "<span class='geoid-ng'>⚠ ジオイド高取得失敗</span>"
+                        else:
+                            geoid_status_ll = "<span style='color:#94a3b8;font-size:11px'>補正なし</span>"
+                            elev_ll = hv
+
                     pin_color = PIN_COLORS[i % len(PIN_COLORS)]
                     color_css = f"rgb({pin_color[0]},{pin_color[1]},{pin_color[2]})"
                     st.markdown(
                         f"<div class='pt-card'><div class='pt-title'>"
                         f"<span style='display:inline-block;width:10px;height:10px;border-radius:50%;"
                         f"background:{color_css};margin-right:6px'></span>"
-                        f"{pt['name']}</div>",
+                        f"{pt['name']} &nbsp; {geoid_status_ll}</div>",
                         unsafe_allow_html=True)
 
                     rc1,rc2,rc3,rc4 = st.columns(4)
@@ -832,24 +861,34 @@ with tab1:
                             f"<div class='rc-val'>{Yr:,.4f}</div></div>",
                             unsafe_allow_html=True)
                     with rc3:
-                        hv_str = f"{hv:.3f} m" if pt["h"].strip() else "---"
-                        hv_sub = "入力値" if pt["h"].strip() else "未入力"
+                        if elev_ll is not None:
+                            z_str = f"{elev_ll:.3f} m"
+                            z_sub = f"h={hv:.3f} - N={N_ll:.4f}" if N_ll is not None else "補正なし"
+                        elif pt["h"].strip():
+                            z_str = "---"; z_sub = "ジオイド高取得失敗"
+                        else:
+                            z_str = "---"; z_sub = "楕円体高未入力"
                         st.markdown(
-                            f"<div class='rc'><div class='rc-lbl' style='color:#8b5cf6'>楕円体高 h (m)</div>"
-                            f"<div class='rc-val'>{hv_str}</div>"
-                            f"<div class='rc-sub'>{hv_sub}</div></div>",
+                            f"<div class='rc'><div class='rc-lbl' style='color:#f59e0b'>Z 標高 (m)</div>"
+                            f"<div class='rc-val'>{z_str}</div>"
+                            f"<div class='rc-sub'>{z_sub}</div></div>",
                             unsafe_allow_html=True)
                     with rc4:
                         st.markdown(
-                            f"<div class='rc'><div class='rc-lbl' style='color:#f59e0b'>座標系</div>"
+                            f"<div class='rc'><div class='rc-lbl' style='color:#8b5cf6'>座標系</div>"
                             f"<div class='rc-val'>第 {Z} 系</div>"
                             f"<div class='rc-sub'>GRS80 / m0=0.9999</div></div>",
                             unsafe_allow_html=True)
                     st.markdown("</div>", unsafe_allow_html=True)
 
                     map_rows2.append({"name":pt["name"],"lat":lv,"lon":lov,
-                                      "tooltip":f"X={Xr:.3f} / Y={Yr:.3f}"})
-                    csv_rows2.append(f"{pt['name']},{fmt_decimal(lv)},{fmt_decimal(lov)},{hv:.3f},{Xr:.4f},{Yr:.4f},{Z}")
+                                      "tooltip":f"X={Xr:.3f} / Y={Yr:.3f}" + (f" / Z={elev_ll:.3f}m" if elev_ll else "")})
+                    csv_rows2.append(
+                        f"{pt['name']},{fmt_decimal(lv)},{fmt_decimal(lov)},{hv:.3f},"
+                        + f"{Xr:.4f},{Yr:.4f},"
+                        + (f"{elev_ll:.3f}" if elev_ll is not None else "") + ","
+                        + f"{Z}"
+                    )
 
                 except (ValueError, Exception) as ex:
                     st.error(f"[{pt['name']}] エラー: {ex}")
@@ -861,6 +900,186 @@ with tab1:
                 st.download_button("📥 全点 CSV ダウンロード", csv_out2, "converted.csv", "text/csv")
         else:
             st.info(f"緯度・経度を {in_fmt_lbl} 形式で入力してください。")
+
+    # ══════════════════════════════
+    # 緯度経度 形式変換
+    # ══════════════════════════════
+    else:  # dir1 == "緯度経度 形式変換"
+        # session_state 初期化
+        if "pts_cvt" not in st.session_state:
+            st.session_state["pts_cvt"] = [{"name":"pt1","lat":"","lon":""}]
+        for i, pt in enumerate(st.session_state["pts_cvt"]):
+            for f,v in [("name",pt["name"]),("lat",pt["lat"]),("lon",pt["lon"])]:
+                k = f"cvt_{f}_{i}"
+                if k not in st.session_state:
+                    st.session_state[k] = v
+
+        # 入力フォーマット
+        st.markdown("<div class='sec-label'>入力フォーマット</div>", unsafe_allow_html=True)
+        in_fmt_cvt_lbl = st.selectbox(
+            "入力フォーマット（形式変換）",
+            list(OUTPUT_FORMATS.keys()),
+            index=0, label_visibility="collapsed", key="in_fmt_cvt"
+        )
+        IN_FMT_CVT = OUTPUT_FORMATS[in_fmt_cvt_lbl]
+
+        # 出力フォーマット
+        st.markdown("<div class='sec-label'>出力フォーマット</div>", unsafe_allow_html=True)
+        out_fmt_cvt_lbl = st.selectbox(
+            "出力フォーマット（形式変換）",
+            list(OUTPUT_FORMATS.keys()),
+            index=1, label_visibility="collapsed", key="out_fmt_cvt"
+        )
+        OUT_FMT_CVT = OUTPUT_FORMATS[out_fmt_cvt_lbl]
+
+        ph_cvt_lat = FORMAT_PLACEHOLDER[IN_FMT_CVT]
+        ph_cvt_lon = FORMAT_PLACEHOLDER[IN_FMT_CVT].replace("35","139").replace("40","47")
+
+        col_add_c, col_clr_c, col_swap_c, _ = st.columns([1,1,1.4,4])
+        with col_add_c:
+            if st.button("＋ 点を追加", key="add_cvt"):
+                for i, pt in enumerate(st.session_state["pts_cvt"]):
+                    for f in ("name","lat","lon"):
+                        k = f"cvt_{f}_{i}"
+                        if k in st.session_state: pt[f] = st.session_state[k]
+                n = len(st.session_state["pts_cvt"]) + 1
+                st.session_state["pts_cvt"].append({"name":f"pt{n}","lat":"","lon":""})
+                st.rerun()
+        with col_clr_c:
+            if st.button("🗑 全クリア", key="clr_cvt"):
+                st.session_state["pts_cvt"] = [{"name":"pt1","lat":"","lon":""}]
+                for k in [k for k in st.session_state if k.startswith("cvt_")]:
+                    del st.session_state[k]
+                st.rerun()
+        with col_swap_c:
+            if st.button("⇄ 緯↔経 入替", key="swap_cvt"):
+                for i, pt in enumerate(st.session_state["pts_cvt"]):
+                    for f in ("name","lat","lon"):
+                        k = f"cvt_{f}_{i}"
+                        if k in st.session_state: pt[f] = st.session_state[k]
+                for i, pt in enumerate(st.session_state["pts_cvt"]):
+                    old_lat, old_lon = pt["lat"], pt["lon"]
+                    st.session_state[f"cvt_lat_{i}"] = old_lon
+                    st.session_state[f"cvt_lon_{i}"] = old_lat
+                    pt["lat"], pt["lon"] = old_lon, old_lat
+                st.rerun()
+
+        st.markdown(f"<div class='sec-label'>入力（{in_fmt_cvt_lbl}）</div>", unsafe_allow_html=True)
+
+        pts_cvt = st.session_state["pts_cvt"]
+        del_idx_c = None
+        for i, pt in enumerate(pts_cvt):
+            c0,c1,c2,c3,c4 = st.columns([0.6,1.4,2.5,2.5,0.45])
+            with c0:
+                toppad = "32" if i==0 else "8"
+                st.markdown(
+                    f"<div style='padding-top:{toppad}px;font-size:12px;font-weight:700;color:#64748b'>#{i+1}</div>",
+                    unsafe_allow_html=True)
+            with c1:
+                st.text_input("点名", key=f"cvt_name_{i}",
+                              label_visibility="visible" if i==0 else "collapsed")
+            with c2:
+                st.text_input(
+                    f"緯度（{in_fmt_cvt_lbl.split('（')[0]}）" if i==0 else "緯度",
+                    placeholder=ph_cvt_lat, key=f"cvt_lat_{i}",
+                    label_visibility="visible" if i==0 else "collapsed")
+            with c3:
+                st.text_input(
+                    f"経度（{in_fmt_cvt_lbl.split('（')[0]}）" if i==0 else "経度",
+                    placeholder=ph_cvt_lon, key=f"cvt_lon_{i}",
+                    label_visibility="visible" if i==0 else "collapsed")
+            with c4:
+                if i == 0:
+                    st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+                if st.button("✕", key=f"del_cvt_{i}", disabled=len(pts_cvt)==1):
+                    del_idx_c = i
+
+        if del_idx_c is not None:
+            for i, pt in enumerate(st.session_state["pts_cvt"]):
+                for f in ("name","lat","lon"):
+                    k = f"cvt_{f}_{i}"
+                    if k in st.session_state: pt[f] = st.session_state[k]
+            new_pts_c = [p for j,p in enumerate(st.session_state["pts_cvt"]) if j != del_idx_c]
+            for k in [k for k in st.session_state if k.startswith("cvt_name_") or k.startswith("cvt_lat_") or k.startswith("cvt_lon_")]:
+                del st.session_state[k]
+            st.session_state["pts_cvt"] = new_pts_c
+            st.rerun()
+
+        # 現在値を同期
+        for i, pt in enumerate(pts_cvt):
+            for f in ("name","lat","lon"):
+                k = f"cvt_{f}_{i}"
+                if k in st.session_state: pt[f] = st.session_state[k]
+
+        st.markdown("---")
+        has_cvt = any(pt["lat"].strip() and pt["lon"].strip() for pt in pts_cvt)
+
+        if has_cvt:
+            st.markdown(
+                f"<div class='sec-label'>変換結果 &nbsp;"
+                f"<span style='font-size:10px;color:#64748b;font-weight:400'>"
+                f"{in_fmt_cvt_lbl} &rarr; {out_fmt_cvt_lbl}</span></div>",
+                unsafe_allow_html=True)
+
+            map_rowsc, csv_rowsc = [], []
+            csv_hdrc = f"点名,緯度_入力({in_fmt_cvt_lbl}),経度_入力({in_fmt_cvt_lbl}),緯度_出力({out_fmt_cvt_lbl}),経度_出力({out_fmt_cvt_lbl}),緯度_DD,経度_DD"
+
+            for i, pt in enumerate(pts_cvt):
+                if not (pt["lat"].strip() and pt["lon"].strip()):
+                    continue
+                try:
+                    lat_dd = parse_angle(pt["lat"], IN_FMT_CVT)
+                    lon_dd = parse_angle(pt["lon"], IN_FMT_CVT)
+                    lat_out = format_angle(lat_dd, OUT_FMT_CVT)
+                    lon_out = format_angle(lon_dd, OUT_FMT_CVT)
+
+                    pin_color = PIN_COLORS[i % len(PIN_COLORS)]
+                    color_css = f"rgb({pin_color[0]},{pin_color[1]},{pin_color[2]})"
+                    st.markdown(
+                        f"<div class='pt-card'><div class='pt-title'>"
+                        f"<span style='display:inline-block;width:10px;height:10px;border-radius:50%;"
+                        f"background:{color_css};margin-right:6px'></span>"
+                        f"{pt['name']}</div>",
+                        unsafe_allow_html=True)
+
+                    rc1,rc2 = st.columns(2)
+                    with rc1:
+                        st.markdown(
+                            f"<div class='rc'><div class='rc-lbl' style='color:#3b82f6'>緯度 LAT</div>"
+                            f"<div class='rc-val'>{lat_out}</div>"
+                            f"<div class='rc-sub'>{fmt_decimal(lat_dd)} deg</div></div>",
+                            unsafe_allow_html=True)
+                    with rc2:
+                        st.markdown(
+                            f"<div class='rc'><div class='rc-lbl' style='color:#10b981'>経度 LON</div>"
+                            f"<div class='rc-val'>{lon_out}</div>"
+                            f"<div class='rc-sub'>{fmt_decimal(lon_dd)} deg</div></div>",
+                            unsafe_allow_html=True)
+
+                    with st.expander(f"🔢 {pt['name']} 全フォーマット"):
+                        st.dataframe(pd.DataFrame([
+                            {"フォーマット":fl,"緯度":format_angle(lat_dd,fk),"経度":format_angle(lon_dd,fk)}
+                            for fl,fk in OUTPUT_FORMATS.items()
+                        ]), use_container_width=True, hide_index=True)
+
+                    st.markdown("</div>", unsafe_allow_html=True)
+
+                    map_rowsc.append({"name":pt["name"],"lat":lat_dd,"lon":lon_dd,
+                                      "tooltip":f"{lat_out} / {lon_out}"})
+                    csv_rowsc.append(
+                        f"{pt['name']},{pt['lat']},{pt['lon']},{lat_out},{lon_out},"
+                        + f"{fmt_decimal(lat_dd)},{fmt_decimal(lon_dd)}"
+                    )
+                except (ValueError, Exception) as ex:
+                    st.error(f"[{pt['name']}] エラー: {ex}")
+
+            if map_rowsc:
+                st.markdown("#### 📍 地図")
+                render_map(map_rowsc, map_style_lbl, zoom=13)
+                csv_outc = "\ufeff" + csv_hdrc + "\n" + "\n".join(csv_rowsc)
+                st.download_button("📥 全点 CSV ダウンロード", csv_outc, "converted_fmt.csv", "text/csv")
+        else:
+            st.info(f"緯度・経度を {in_fmt_cvt_lbl} 形式で入力してください。")
 
 
 # ═══════════════════════════════════════════════════════
