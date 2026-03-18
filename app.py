@@ -319,14 +319,17 @@ def auto_parse_angle(val: str) -> tuple[float, str]:
     if _re.search(r"(?i)(gons?|gr?)\s*$", s):
         return parse_angle(s, "gons"), "gons"
 
-    # 4. ddmmssss: DD.MMSSSSSS（小数6桁以上で分・秒整数が有効範囲）
-    m = _re.match(r"^(-?)(\d{1,3})\.(\d{6,})$", s)
+    # 4. ddmmssss: DD.MMSSSSSS（小数12桁以上 かつ 分0-59・秒0-59）
+    # 十進角度との誤判定を防ぐため、小数部12桁以上を必須条件とする
+    # 例: 35.404052440000 (14桁) → ddmmssss確定
+    #     140.55591438   (8桁)  → decimal（十進角度として扱う）
+    m = _re.match(r"^(-?)(\d{1,3})\.(\d{12,})$", s)
     if m:
         deg_int = int(m.group(2))
-        dec_str = m.group(3).ljust(10, "0")
+        dec_str = m.group(3).ljust(14, "0")
         mm_val  = int(dec_str[:2])
         ss_int  = int(dec_str[2:4])
-        if deg_int <= 180 and mm_val <= 59 and ss_int <= 59:
+        if deg_int <= 180 and 0 <= mm_val <= 59 and ss_int <= 59:
             return parse_angle(s, "ddmmssss"), "ddmmssss"
 
     # 5. decimal: 純数値（° 記号付きも可）
@@ -1678,7 +1681,7 @@ with tab2:
                                     unsafe_allow_html=True)
 
             if dir2 == "緯度経度 → 平面直角":
-                show = ["点名","判別FMT","X(m)","Y(m)","Z標高(m)","緯度","経度","楕円体高(m)"]
+                show = ["点名","判別FMT","X(m)","Y(m)","Z標高(m)","緯度","経度","楕円体高(m)","ジオイド高N(m)"]
                 st.caption("💡 判別FMT = 入力の緯度・経度に自動判別されたフォーマット")
             else:
                 show = ["点名","X(m)","Y(m)","Z標高(m)","緯度","経度","楕円体高(m)","ジオイド高N(m)"]
