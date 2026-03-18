@@ -705,12 +705,25 @@ st.markdown("""
         if (_locked.has(inp)) { found = true; return; }
         inp.setAttribute('readonly', 'readonly');
         inp.setAttribute('inputmode', 'none');
+        // type="button" にするとiOSはキーボードを表示しない（最も確実）
+        try { inp.setAttribute('type', 'button'); } catch(ex) {}
         inp.style.caretColor = 'transparent';
         inp.style.userSelect = 'none';
         inp.style.webkitUserSelect = 'none';
         inp.style.cursor = 'pointer';
+        // focus即blur（キーボード表示前に閉じる）
         inp.addEventListener('focus', function(e) {
           setTimeout(function(){ e.target.blur(); }, 0);
+        }, true);
+        // touchstart でも即 blur（iOSのフォーカス取得をタップ前に防ぐ）
+        inp.addEventListener('touchstart', function(e) {
+          e.target.blur();
+          // デフォルト動作（フォーカス）を抑制しない ← これが重要
+          // 抑制するとドロップダウンが開かなくなる
+        }, { passive: true });
+        // mousedown でも blur（PCのクリック対策）
+        inp.addEventListener('mousedown', function(e) {
+          e.target.blur();
         }, true);
         _locked.add(inp);
         found = true;
@@ -760,9 +773,24 @@ section[data-testid="stSidebar"] .stSelectbox input {
   -webkit-user-select: none !important;
   caret-color: transparent !important;
   cursor: pointer !important;
+  /* iOS: キーボードを完全に抑制 */
+  -webkit-user-modify: read-only !important;
+  font-size: 16px !important; /* 16px未満だとiOSが自動ズームしてフォーカスする */
 }
 section[data-testid="stSidebar"] .stSelectbox [role="combobox"] {
   cursor: pointer !important;
+}
+/* input の上に透明オーバーレイを重ねてタップを横取り */
+section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] {
+  position: relative !important;
+}
+section[data-testid="stSidebar"] .stSelectbox [data-baseweb="input"]::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 1 !important;
+  cursor: pointer !important;
+  -webkit-tap-highlight-color: transparent !important;
 }
 </style>""", unsafe_allow_html=True)
 
