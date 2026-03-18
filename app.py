@@ -681,72 +681,7 @@ st.markdown("""
   } else {
     tryInit(10);
   }
-  // ── サイドバー selectbox の input に readonly を付与 ──
-  // iOS ではキーボードが出ないよう readOnly + inputmode=none で完全封鎖
-  // ── サイドバー内 selectbox のキーボード封鎖 ──────────────────
-  // 対象: サイドバー内の全 selectbox（座標系・測地系・ジオイドモデル・地図スタイル）
-  // 手法: readonly + inputmode=none + focus即blur の3段階
 
-  // 既にリスナー登録済みの input を追跡
-  var _locked = new WeakSet();
-
-  function lockAllSidebarSelects() {
-    // stSidebar が閉じていても popover/portal 経由で描画される場合があるため
-    // ① sidebar 直下 ② data-testid="stSidebarContent" の両方を検索
-    var roots = [
-      document.querySelector('[data-testid="stSidebar"]'),
-      document.querySelector('[data-testid="stSidebarContent"]'),
-      document.querySelector('[data-testid="stSidebarUserContent"]'),
-    ];
-    var found = false;
-    roots.forEach(function(root) {
-      if (!root) return;
-      root.querySelectorAll('.stSelectbox input, [data-baseweb="select"] input').forEach(function(inp) {
-        if (_locked.has(inp)) { found = true; return; }
-        inp.setAttribute('readonly', 'readonly');
-        inp.setAttribute('inputmode', 'none');
-        // type="button" にするとiOSはキーボードを表示しない（最も確実）
-        try { inp.setAttribute('type', 'button'); } catch(ex) {}
-        inp.style.caretColor = 'transparent';
-        inp.style.userSelect = 'none';
-        inp.style.webkitUserSelect = 'none';
-        inp.style.cursor = 'pointer';
-        // focus即blur（キーボード表示前に閉じる）
-        inp.addEventListener('focus', function(e) {
-          setTimeout(function(){ e.target.blur(); }, 0);
-        }, true);
-        // touchstart でも即 blur（iOSのフォーカス取得をタップ前に防ぐ）
-        inp.addEventListener('touchstart', function(e) {
-          e.target.blur();
-          // デフォルト動作（フォーカス）を抑制しない ← これが重要
-          // 抑制するとドロップダウンが開かなくなる
-        }, { passive: true });
-        // mousedown でも blur（PCのクリック対策）
-        inp.addEventListener('mousedown', function(e) {
-          e.target.blur();
-        }, true);
-        _locked.add(inp);
-        found = true;
-      });
-    });
-    return found;
-  }
-
-  function watchSidebarSelects() {
-    // sidebar 全体を監視して動的追加された input にも適用
-    var root = document.querySelector('[data-testid="stSidebar"]') || document.body;
-    lockAllSidebarSelects();
-    if (window.MutationObserver) {
-      var mo = new MutationObserver(function() { lockAllSidebarSelects(); });
-      mo.observe(root, { childList: true, subtree: true });
-    }
-  }
-
-  function tryLock(n) {
-    if (lockAllSidebarSelects()) { watchSidebarSelects(); return; }
-    if (n > 0) setTimeout(function(){ tryLock(n-1); }, 400);
-  }
-  tryLock(20);
 
 })();
 </script>
@@ -765,33 +700,6 @@ section[data-testid="stSidebar"] .element-container{margin-bottom:0!important;}
 section[data-testid="stSidebar"] hr{margin:6px 0!important;}
 section[data-testid="stSidebar"] .stSelectbox{margin-bottom:0!important;}
 section[data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"]{gap:0!important;}
-
-/* ── selectbox は文字入力禁止（プルダウン選択のみ）── */
-section[data-testid="stSidebar"] .stSelectbox input {
-  pointer-events: none !important;
-  user-select: none !important;
-  -webkit-user-select: none !important;
-  caret-color: transparent !important;
-  cursor: pointer !important;
-  /* iOS: キーボードを完全に抑制 */
-  -webkit-user-modify: read-only !important;
-  font-size: 16px !important; /* 16px未満だとiOSが自動ズームしてフォーカスする */
-}
-section[data-testid="stSidebar"] .stSelectbox [role="combobox"] {
-  cursor: pointer !important;
-}
-/* input の上に透明オーバーレイを重ねてタップを横取り */
-section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] {
-  position: relative !important;
-}
-section[data-testid="stSidebar"] .stSelectbox [data-baseweb="input"]::after {
-  content: "" !important;
-  position: absolute !important;
-  inset: 0 !important;
-  z-index: 1 !important;
-  cursor: pointer !important;
-  -webkit-tap-highlight-color: transparent !important;
-}
 </style>""", unsafe_allow_html=True)
 
     st.markdown("<div style='font-size:15px;font-weight:700;color:#f1f5f9;padding:4px 0 6px'>⚙️ 共通設定</div>", unsafe_allow_html=True)
