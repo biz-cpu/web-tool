@@ -1550,7 +1550,9 @@ with tab2:
 """, unsafe_allow_html=True)
 
     st.markdown("")
-    up1 = st.file_uploader("CSVファイルをアップロード", ["csv","txt"], key="u1")
+    # 変換方向ごとにキーを変えることで、方向切り替え時にファイルを自動リセット
+    _upload_key = "u1_jpc" if dir2 == "平面直角 → 緯度経度" else "u1_ll"
+    up1 = st.file_uploader("CSVファイルをアップロード", ["csv","txt"], key=_upload_key)
     src = up1.read().decode("utf-8-sig") if up1 else ""
 
     if src.strip():
