@@ -356,66 +356,74 @@ def ocr_image_to_points(image_bytes: bytes, mime_type: str, mode: str) -> list[d
     return []
 
 
-def render_photo_import(mode: str, key_suffix: str):
-    """
-    写真取り込みUI: アップロード → OCR → session_stateに反映
-    mode: "jpc" | "ll" | "cvt"
-    """
-    with st.expander("📷 写真から読み取る", expanded=False):
-        st.caption("測量機器の画面・帳票・手書きメモなどを撮影してアップロードしてください")
-        uploaded = st.file_uploader(
-            "画像をアップロード",
-            type=["jpg","jpeg","png","heic","webp"],
-            key=f"photo_{key_suffix}",
-            label_visibility="collapsed",
-        )
-        if uploaded is not None:
-            col_img, col_btn = st.columns([3,1])
-            with col_img:
-                st.image(uploaded, use_container_width=True)
-            with col_btn:
-                if st.button("🔍 読み取り実行", key=f"ocr_{key_suffix}"):
-                    with st.spinner("画像を解析中..."):
-                        try:
-                            img_bytes = uploaded.read()
-                            mime = "image/jpeg"
-                            if uploaded.name.lower().endswith(".png"):
-                                mime = "image/png"
-                            elif uploaded.name.lower().endswith(".webp"):
-                                mime = "image/webp"
+def camera_ocr_button(mode: str, row_idx: int):
+    """列内に 📷 ボタンだけ描画。タップで open フラグを反転。"""
+    open_key = f"cam_open_{mode}_{row_idx}"
+    if open_key not in st.session_state:
+        st.session_state[open_key] = False
+    if st.button("📷", key=f"cam_btn_{mode}_{row_idx}",
+                 help="カメラで撮影して読み取る"):
+        st.session_state[open_key] = not st.session_state[open_key]
+        st.rerun()
 
-                            points = ocr_image_to_points(img_bytes, mime, mode)
 
-                            if not points:
-                                st.error("データを読み取れませんでした")
-                            else:
-                                # session_state に反映
-                                if mode == "jpc":
-                                    key = "pts_jpc"
-                                    template = {"name":"","x":"","y":"","z":""}
-                                    fields = ("name","x","y","z")
-                                else:
-                                    key = "pts_ll" if mode == "ll" else "pts_cvt"
-                                    template = {"name":"","lat":"","lon":"","h":""}
-                                    fields = ("name","lat","lon","h")
+def camera_ocr_panel(mode: str, row_idx: int):
+    """列の外（フル幅）にカメラ撮影 + OCR パネルを展開する。"""
+    open_key = f"cam_open_{mode}_{row_idx}"
+    cam_key  = f"cam_{mode}_{row_idx}"
+    if not st.session_state.get(open_key, False):
+        return
 
-                                new_pts = []
-                                for p in points:
-                                    pt = dict(template)
-                                    for f in fields:
-                                        pt[f] = str(p.get(f, "")).strip()
-                                    new_pts.append(pt)
+    fields  = ("name","x","y","z") if mode == "jpc" else ("name","lat","lon","h")
+    pts_key = {"jpc":"pts_jpc","ll":"pts_ll","cvt":"pts_cvt"}[mode]
+    lbl_fields = "点名・X・Y・Z" if mode == "jpc" else "点名・緯度・経度・楕円体高"
 
-                                if new_pts:
-                                    st.session_state[key] = new_pts
-                                    # ウィジェットキーも更新
-                                    for i, pt in enumerate(new_pts):
-                                        for f in fields:
-                                            st.session_state[f"{key.replace('pts_','')[:3]}_{f}_{i}"] = pt[f]
-                                    st.success(f"✅ {len(new_pts)} 点を読み取りました")
-                                    st.rerun()
-                        except ValueError as e:
-                            st.error(str(e))
+    st.markdown(
+        f"<div style='background:#f0f9ff;border:1px solid #bae6fd;"
+        f"border-radius:10px;padding:10px 14px;margin:4px 0 8px'>"
+        f"<b>📷 #{row_idx+1} をカメラで読み取る</b>"
+        f"<span style='font-size:11px;color:#64748b;margin-left:8px'>{lbl_fields}</span>"
+        f"</div>",
+        unsafe_allow_html=True
+    )
+    img = st.camera_input(
+        f"#{row_idx+1} 撮影",
+        key=cam_key,
+        label_visibility="collapsed",
+    )
+    if img is not None:
+        col_img, col_act = st.columns([3, 1])
+        with col_img:
+            st.image(img, use_container_width=True)
+        with col_act:
+            st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+            if st.button("🔍 読取", key=f"ocr_run_{mode}_{row_idx}",
+                         use_container_width=True):
+                with st.spinner("AI解析中..."):
+                    try:
+                        pts_data = ocr_image_to_points(img.getvalue(), "image/jpeg", mode)
+                        if not pts_data:
+                            st.error("読み取れませんでした。数値が写った部分を正面から撮り直してください。")
+                        else:
+                            p = pts_data[0]
+                            while len(st.session_state[pts_key]) <= row_idx:
+                                st.session_state[pts_key].append(
+                                    {"name":"","x":"","y":"","z":""} if mode=="jpc"
+                                    else {"name":"","lat":"","lon":"","h":""}
+                                )
+                            for f in fields:
+                                val = str(p.get(f, "")).strip()
+                                st.session_state[pts_key][row_idx][f] = val
+                                st.session_state[f"{mode}_{f}_{row_idx}"] = val
+                            st.session_state[open_key] = False
+                            st.success(f"✅ #{row_idx+1} 読み取り完了")
+                            st.rerun()
+                    except ValueError as e:
+                        st.error(str(e))
+            if st.button("✕ 閉じる", key=f"cam_close_{mode}_{row_idx}",
+                         use_container_width=True):
+                st.session_state[open_key] = False
+                st.rerun()
 
 
 def auto_parse_angle(val: str) -> tuple[float, str]:
@@ -1069,7 +1077,6 @@ with tab1:
                 _swap_jpc()
                 st.rerun()
 
-        render_photo_import("jpc", "jpc")
         st.markdown("<div class='sec-label'>入力（平面直角座標）</div>", unsafe_allow_html=True)
 
         pts = st.session_state["pts_jpc"]
@@ -1108,6 +1115,10 @@ with tab1:
             _clear_keys("jpc_")
             st.session_state["pts_jpc"] = new_pts
             st.rerun()
+
+        # カメラパネル（行の外でフル幅展開）
+        for i in range(len(st.session_state["pts_jpc"])):
+            camera_ocr_panel("jpc", i)
 
         # 最新値を読み取り
         pts = _read_jpc()
@@ -1259,7 +1270,6 @@ with tab1:
                 _swap_ll()
                 st.rerun()
 
-        render_photo_import("ll", "ll")
         st.markdown(f"<div class='sec-label'>入力（{in_fmt_lbl}）</div>", unsafe_allow_html=True)
 
         pts2 = st.session_state["pts_ll"]
@@ -1300,6 +1310,10 @@ with tab1:
             _clear_keys("ll_name_"); _clear_keys("ll_lat_"); _clear_keys("ll_lon_"); _clear_keys("ll_h_")
             st.session_state["pts_ll"] = new_pts2
             st.rerun()
+
+        # カメラパネル（行の外でフル幅展開）
+        for i in range(len(st.session_state["pts_ll"])):
+            camera_ocr_panel("ll", i)
 
         pts2 = _read_ll()
 
@@ -1475,13 +1489,12 @@ with tab1:
                     pt["lat"], pt["lon"] = old_lon, old_lat
                 st.rerun()
 
-        render_photo_import("cvt", "cvt")
         st.markdown(f"<div class='sec-label'>入力（{in_fmt_cvt_lbl}）</div>", unsafe_allow_html=True)
 
         pts_cvt = st.session_state["pts_cvt"]
         del_idx_c = None
         for i, pt in enumerate(pts_cvt):
-            c0,c1,c2,c3,c4,c5 = st.columns([0.6,1.4,2,2,1.6,0.45])
+            c0,c1,c2,c3,c4,c5,c6 = st.columns([0.6,1.4,2,2,1.6,0.45,0.45])
             with c0:
                 toppad = "32" if i==0 else "8"
                 st.markdown(
@@ -1509,6 +1522,13 @@ with tab1:
                     st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
                 if st.button("✕", key=f"del_cvt_{i}", disabled=len(pts_cvt)==1):
                     del_idx_c = i
+            with c6:
+                if i == 0:
+                    st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+                camera_ocr_button("cvt", i)
+
+        for i in range(len(pts_cvt)):
+            camera_ocr_panel("cvt", i)
 
         if del_idx_c is not None:
             for i, pt in enumerate(st.session_state["pts_cvt"]):
