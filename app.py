@@ -576,156 +576,79 @@ section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] span { col
 /* pydeck地図の高さ統一 */
 .element-container iframe { border-radius:12px; }
 
-/* ── スマホ用 サイドバートグルボタン（キーボード追従・top固定）── */
-#sb-toggle-btn {
-  display: none;
-  position: fixed;
-  /* top固定: キーボード表示でも上部は動かないため安定 */
-  top: calc(8px + env(safe-area-inset-top, 0px));
-  left: 12px;
-  z-index: 999999;
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  background: #0f172a;
-  color: #f1f5f9;
-  border: 1.5px solid #475569;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.5);
-  font-size: 20px;
-  line-height: 1;
-  cursor: pointer;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s, transform 0.15s, top 0.1s;
-  -webkit-tap-highlight-color: transparent;
-  /* iOS Safariでfixedをiframe外に出すための補助 */
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
-  will-change: transform;
-}
-#sb-toggle-btn:active { transform: scale(0.91) translateZ(0); background: #1e3a5f; }
-
-/* スマホ幅（768px以下）でのみ表示 */
+/* ══════════════════════════════════════════════════════
+   スマホ対応 CSS
+   ══════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
-  #sb-toggle-btn { display: flex; }
+
+  /* ── ボタン行を横並びに強制（＋追加・全クリア・入替を1行に）── */
+  /* Streamlit の columns ラッパーに flex を強制 */
+  [data-testid="stHorizontalBlock"] {
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    gap: 6px !important;
+  }
+  [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+  }
+  /* ボタンを小さく・折り返しなし */
+  [data-testid="stHorizontalBlock"] button {
+    font-size: 11px !important;
+    padding: 4px 6px !important;
+    white-space: nowrap !important;
+    min-height: 32px !important;
+  }
+
+  /* ── Streamlit ネイティブのサイドバー折りたたみボタンを大きく・常時表示 ── */
+  [data-testid="collapsedControl"],
+  [data-testid="stSidebarCollapsedControl"] {
+    position: fixed !important;
+    top: 8px !important;
+    left: 8px !important;
+    z-index: 999999 !important;
+    background: #0f172a !important;
+    border-radius: 10px !important;
+    border: 1.5px solid #475569 !important;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.55) !important;
+    width: 44px !important;
+    height: 44px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+  [data-testid="collapsedControl"] button,
+  [data-testid="stSidebarCollapsedControl"] button {
+    color: #f1f5f9 !important;
+    font-size: 20px !important;
+    width: 44px !important;
+    height: 44px !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+  }
+  [data-testid="collapsedControl"] svg,
+  [data-testid="stSidebarCollapsedControl"] svg {
+    fill: #f1f5f9 !important;
+    width: 22px !important;
+    height: 22px !important;
+  }
+
+  /* キーボード表示時も fixed が追従するよう iOS 向け補強 */
+  [data-testid="collapsedControl"],
+  [data-testid="stSidebarCollapsedControl"] {
+    -webkit-transform: translateZ(0) !important;
+    transform: translateZ(0) !important;
+    will-change: transform !important;
+  }
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ── スマホ用サイドバートグルボタン（スクロール追従）──
-# Streamlit のサイドバートグルボタンを JavaScript でラップして
-# 画面右下に固定表示するフローティングボタンを注入する
-import streamlit.components.v1 as _stc
-_stc.html("""
-<style>
-  #sb-float-btn {
-    display: none;
-    position: fixed;
-    top: 8px;
-    left: 12px;
-    z-index: 999999;
-    width: 44px;
-    height: 44px;
-    border-radius: 10px;
-    background: #0f172a;
-    color: #f1f5f9;
-    border: 1.5px solid #475569;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.5);
-    font-size: 20px;
-    cursor: pointer;
-    align-items: center;
-    justify-content: center;
-    -webkit-tap-highlight-color: transparent;
-    -webkit-transform: translateZ(0);
-    transform: translateZ(0);
-    will-change: transform;
-    transition: background 0.2s;
-  }
-  @media (max-width: 768px) {
-    #sb-float-btn { display: flex; }
-  }
-</style>
-<div id="sb-float-btn" title="メニュー">☰</div>
-<script>
-(function() {
-  var btn = document.getElementById('sb-float-btn');
-
-  // ── ネイティブのStreamlitサイドバーボタンを操作 ──
-  function getNativeBtn() {
-    var doc = window.parent.document;
-    return doc.querySelector(
-      '[data-testid="collapsedControl"] button, '
-      + '[data-testid="stSidebarCollapsedControl"] button, '
-      + '[data-testid="stSidebarToggle"] button'
-    );
-  }
-
-  function hideSidebarNativeBtn() {
-    var doc = window.parent.document;
-    var btns = doc.querySelectorAll(
-      '[data-testid="collapsedControl"], '
-      + '[data-testid="stSidebarCollapsedControl"]'
-    );
-    btns.forEach(function(b) {
-      b.style.cssText += 'opacity:0!important;pointer-events:none!important;';
-    });
-  }
-
-  function isSidebarOpen() {
-    var doc = window.parent.document;
-    var sb = doc.querySelector('[data-testid="stSidebar"]');
-    if (!sb) return false;
-    var w = sb.getBoundingClientRect().width;
-    return w > 60;
-  }
-
-  function updateIcon() {
-    if (btn) btn.textContent = isSidebarOpen() ? '✕' : '☰';
-  }
-
-  btn.addEventListener('click', function(e) {
-    e.preventDefault();
-    var nb = getNativeBtn();
-    if (nb) { nb.click(); }
-    setTimeout(updateIcon, 350);
-  });
-
-  // ── iOS キーボード表示時の top 位置補正 ──
-  // visualViewport API: キーボード表示でビューポートのoffsetTopが変化する
-  function adjustBtnPosition() {
-    if (!window.visualViewport) return;
-    var vv = window.visualViewport;
-    // visualViewport.offsetTop = スクロール位置からキーボードぶんずれた量
-    // ボタンをそのオフセット分だけ下にずらすことで「画面の見えている部分の上端」に追従
-    var topOffset = Math.round(vv.offsetTop + 8);
-    btn.style.top = topOffset + 'px';
-  }
-
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', adjustBtnPosition);
-    window.visualViewport.addEventListener('scroll', adjustBtnPosition);
-  }
-
-  // フォールバック: window の resize / scroll でも補正
-  window.addEventListener('resize', adjustBtnPosition);
-
-  // 初期化
-  setTimeout(function() {
-    if (window.innerWidth <= 768) hideSidebarNativeBtn();
-    updateIcon();
-    adjustBtnPosition();
-  }, 800);
-
-  // MutationObserver でサイドバー開閉をウォッチしてアイコン更新
-  var doc = window.parent.document;
-  var target = doc.querySelector('[data-testid="stSidebar"]');
-  if (target && window.MutationObserver) {
-    var mo = new MutationObserver(function() { updateIcon(); });
-    mo.observe(target, { attributes: true, childList: false, subtree: false });
-  }
-})();
-</script>
-""", height=0, scrolling=False)
+# ── スマホ用サイドバーボタンはCSS側で対応（上記 @media (max-width:768px) 参照）
+# iframe経由のfloatingボタンはiOS Chromeで親ページに効かないため廃止
 
 # ═══════════════════════════════════════════════════════
 # 7. サイドバー共通設定
