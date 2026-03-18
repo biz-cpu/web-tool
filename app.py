@@ -1067,21 +1067,13 @@ with tab1:
                             f"<div class='rc-sub'>{sub}</div></div>",
                             unsafe_allow_html=True)
 
-                    with st.expander(f"🔢 {pt['name']} 全フォーマット"):
-                        st.dataframe(pd.DataFrame([
-                            {"フォーマット":fl,"緯度":format_angle(lat_dd,fk),"経度":format_angle(lon_dd,fk)}
-                            for fl,fk in OUTPUT_FORMATS.items()
-                        ]), use_container_width=True, hide_index=True)
-
                     st.markdown("</div>", unsafe_allow_html=True)
 
                     tip = f"Z={Zv:.4f}m / N={N:.4f}m / h={ellH:.4f}m" if ellH is not None else fmt_decimal(lat_dd)
                     map_rows.append({"name":pt["name"],"lat":lat_dd,"lon":lon_dd,"tooltip":tip})
+                    # A=点名, B=緯度, C=経度, D=楕円体高
                     csv_rows.append(",".join([
                         str(pt["name"]),
-                        f"{Xv:.4f}",
-                        f"{Yv:.4f}",
-                        f"{Zv:.4f}" if Zv is not None else "",
                         format_angle(lat_dd, FMT_JPC),
                         format_angle(lon_dd, FMT_JPC),
                         f"{ellH:.4f}" if ellH is not None else "",
@@ -1263,15 +1255,12 @@ with tab1:
 
                     map_rows2.append({"name":pt["name"],"lat":lv,"lon":lov,
                                       "tooltip":f"X={Xr:.4f} / Y={Yr:.4f}" + (f" / Z={elev_ll:.4f}m" if elev_ll else "")})
-                    # A=点名, B=X, C=Y, D=Z標高, E=緯度, F=経度, G=楕円体高
+                    # A=点名, B=X, C=Y, D=Z標高
                     csv_rows2.append(",".join([
                         str(pt["name"]),
                         f"{Xr:.4f}",
                         f"{Yr:.4f}",
                         f"{elev_ll:.4f}" if elev_ll is not None else "",
-                        fmt_decimal(lv),   # E=緯度（十進角度8桁）
-                        fmt_decimal(lov),  # F=経度（十進角度8桁）
-                        f"{hv:.4f}" if pt["h"].strip() else "",  # G=楕円体高
                     ]))
 
                 except (ValueError, Exception) as ex:
@@ -1465,12 +1454,6 @@ with tab1:
                             f"<div class='rc-sub'>{hc_sub}</div></div>",
                             unsafe_allow_html=True)
 
-                    with st.expander(f"🔢 {pt['name']} 全フォーマット"):
-                        st.dataframe(pd.DataFrame([
-                            {"フォーマット":fl,"緯度":format_angle(lat_dd,fk),"経度":format_angle(lon_dd,fk)}
-                            for fl,fk in OUTPUT_FORMATS.items()
-                        ]), use_container_width=True, hide_index=True)
-
                     st.markdown("</div>", unsafe_allow_html=True)
 
                     h_cvt_raw2 = st.session_state.get(f"cvt_h_{i}", "")
@@ -1480,11 +1463,9 @@ with tab1:
                                       "tooltip":f"{lat_out} / {lon_out}{tip_h}"})
                     h_cvt = st.session_state.get(f"cvt_h_{i}", "")
                     h_cvt_val = float(h_cvt) if h_cvt.strip() else None
+                    # A=点名, B=緯度, C=経度, D=楕円体高
                     csv_rowsc.append(",".join([
                         str(pt["name"]),
-                        "",   # X（平面直角なし）
-                        "",   # Y
-                        "",   # Z標高
                         lat_out,
                         lon_out,
                         f"{h_cvt_val:.4f}" if h_cvt_val is not None else "",
