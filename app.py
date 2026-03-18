@@ -1082,7 +1082,11 @@ with tab1:
         pts = st.session_state["pts_jpc"]
         del_idx = None
         for i, pt in enumerate(pts):
-            c0,c1,c2,c3,c4,c5 = st.columns([0.6,1.4,2,2,2,0.45])
+            cam_col, c0, c1, c2, c3, c4, c5 = st.columns([0.45,0.5,1.4,2,2,2,0.45])
+            with cam_col:
+                if i == 0:
+                    st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+                camera_ocr_button("jpc", i)
             with c0:
                 toppad = "32" if i==0 else "8"
                 st.markdown(
@@ -1275,7 +1279,11 @@ with tab1:
         pts2 = st.session_state["pts_ll"]
         del_idx2 = None
         for i, pt in enumerate(pts2):
-            c0,c1,c2,c3,c4,c5 = st.columns([0.6,1.4,2.3,2.3,1.8,0.45])
+            cam_col, c0, c1, c2, c3, c4, c5 = st.columns([0.45,0.5,1.4,2.3,2.3,1.8,0.45])
+            with cam_col:
+                if i == 0:
+                    st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+                camera_ocr_button("ll", i)
             with c0:
                 toppad = "32" if i==0 else "8"
                 st.markdown(
@@ -1494,7 +1502,11 @@ with tab1:
         pts_cvt = st.session_state["pts_cvt"]
         del_idx_c = None
         for i, pt in enumerate(pts_cvt):
-            c0,c1,c2,c3,c4,c5,c6 = st.columns([0.6,1.4,2,2,1.6,0.45,0.45])
+            cam_col, c0, c1, c2, c3, c4, c5 = st.columns([0.45,0.5,1.4,2,2,1.6,0.45])
+            with cam_col:
+                if i == 0:
+                    st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+                camera_ocr_button("cvt", i)
             with c0:
                 toppad = "32" if i==0 else "8"
                 st.markdown(
