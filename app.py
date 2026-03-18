@@ -575,8 +575,96 @@ section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] span { col
 
 /* pydeck地図の高さ統一 */
 .element-container iframe { border-radius:12px; }
+
+/* ── スマホ用 サイドバートグルボタン（スクロール追従）── */
+#sb-toggle-btn {
+  display: none;               /* デフォルト非表示（PC） */
+  position: fixed;
+  bottom: 20px;
+  left: 16px;
+  z-index: 99999;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #0f172a;
+  color: #f1f5f9;
+  border: 2px solid #334155;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+#sb-toggle-btn:active { transform: scale(0.92); background: #1e3a5f; }
+
+/* スマホ幅（768px以下）でのみ表示 */
+@media (max-width: 768px) {
+  #sb-toggle-btn { display: flex; }
+}
 </style>
 """, unsafe_allow_html=True)
+
+# ── スマホ用サイドバートグルボタン（スクロール追従）──
+# Streamlit のサイドバートグルボタンを JavaScript でラップして
+# 画面右下に固定表示するフローティングボタンを注入する
+import streamlit.components.v1 as _stc
+_stc.html("""
+<div id="sb-toggle-btn" onclick="toggleSidebar()" title="メニュー">☰</div>
+<script>
+(function() {
+  // Streamlit の本体トグルボタンを探して非表示にする
+  function hideSidebarNativeBtn() {
+    var btns = window.parent.document.querySelectorAll(
+      '[data-testid="collapsedControl"], [data-testid="stSidebarCollapsedControl"]'
+    );
+    btns.forEach(function(b){ b.style.opacity = '0'; b.style.pointerEvents = 'none'; });
+  }
+
+  // サイドバーの開閉状態を判定して切り替える
+  window.toggleSidebar = function() {
+    var doc = window.parent.document;
+    var sidebar = doc.querySelector('[data-testid="stSidebar"]');
+    if (!sidebar) return;
+
+    // 現在の状態を確認（collapsed クラスや style で判定）
+    var isCollapsed = sidebar.getAttribute('aria-expanded') === 'false'
+                   || sidebar.classList.contains('st-emotion-cache-collapsed')
+                   || getComputedStyle(sidebar).transform.includes('-');
+
+    // Streamlit のネイティブトグルボタンをクリックして開閉
+    var nativeBtn = doc.querySelector(
+      '[data-testid="collapsedControl"] button, '
+      + '[data-testid="stSidebarCollapsedControl"] button, '
+      + 'button[kind="header"]'
+    );
+    if (!nativeBtn) {
+      // フォールバック: sidebar の最初の button を探す
+      nativeBtn = doc.querySelector('[data-testid="stSidebar"] button');
+    }
+    if (nativeBtn) nativeBtn.click();
+
+    // アイコンを切り替える
+    var btn = document.getElementById('sb-toggle-btn');
+    if (btn) {
+      setTimeout(function(){
+        var sb2 = doc.querySelector('[data-testid="stSidebar"]');
+        // sidebar が幅を持っていれば開いている
+        var isOpen = sb2 && sb2.getBoundingClientRect().width > 50;
+        btn.textContent = isOpen ? '✕' : '☰';
+      }, 300);
+    }
+  };
+
+  // ページ読み込み後にネイティブボタンを隠す（スマホのみ）
+  setTimeout(function(){
+    if (window.innerWidth <= 768) hideSidebarNativeBtn();
+  }, 1000);
+})();
+</script>
+""", height=0, scrolling=False)
 
 # ═══════════════════════════════════════════════════════
 # 7. サイドバー共通設定
