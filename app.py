@@ -1061,8 +1061,8 @@ with tab1:
                             f"<div class='rc-sub'>{fmt_decimal(lon_dd)} deg</div></div>",
                             unsafe_allow_html=True)
                     with rc3:
-                        hs  = f"{ellH:.3f} m" if ellH is not None else "---"
-                        sub = f"Z={Zv:.3f}+N={N:.4f}" if (ellH is not None and N is not None and Zv is not None) else ""
+                        hs  = f"{ellH:.4f} m" if ellH is not None else "---"
+                        sub = f"Z={Zv:.4f}+N={N:.4f}" if (ellH is not None and N is not None and Zv is not None) else ""
                         st.markdown(
                             f"<div class='rc'><div class='rc-lbl' style='color:#8b5cf6'>楕円体高 h (m)</div>"
                             f"<div class='rc-val'>{hs}</div>"
@@ -1077,13 +1077,13 @@ with tab1:
 
                     st.markdown("</div>", unsafe_allow_html=True)
 
-                    tip = f"Z={Zv:.3f}m / N={N:.4f}m / h={ellH:.3f}m" if ellH is not None else fmt_decimal(lat_dd)
+                    tip = f"Z={Zv:.4f}m / N={N:.4f}m / h={ellH:.4f}m" if ellH is not None else fmt_decimal(lat_dd)
                     map_rows.append({"name":pt["name"],"lat":lat_dd,"lon":lon_dd,"tooltip":tip})
                     csv_rows.append(
                         f"{pt['name']},{Xv},{Yv},"
-                        + (f"{Zv:.3f}" if Zv is not None else "") + ","
+                        + (f"{Zv:.4f}" if Zv is not None else "") + ","
                         + (f"{N:.4f}"  if N  is not None else "") + ","
-                        + (f"{ellH:.3f}" if ellH is not None else "") + ","
+                        + (f"{ellH:.4f}" if ellH is not None else "") + ","
                         + f"{format_angle(lat_dd,FMT_JPC)},{format_angle(lon_dd,FMT_JPC)}"
                     )
                 except (ValueError, Exception) as ex:
@@ -1243,8 +1243,8 @@ with tab1:
                             unsafe_allow_html=True)
                     with rc3:
                         if elev_ll is not None:
-                            z_str = f"{elev_ll:.3f} m"
-                            z_sub = f"h={hv:.3f} - N={N_ll:.4f}" if N_ll is not None else "補正なし"
+                            z_str = f"{elev_ll:.4f} m"
+                            z_sub = f"h={hv:.4f} - N={N_ll:.4f}" if N_ll is not None else "補正なし"
                         elif pt["h"].strip():
                             z_str = "---"; z_sub = "ジオイド高取得失敗"
                         else:
@@ -1263,11 +1263,11 @@ with tab1:
                     st.markdown("</div>", unsafe_allow_html=True)
 
                     map_rows2.append({"name":pt["name"],"lat":lv,"lon":lov,
-                                      "tooltip":f"X={Xr:.3f} / Y={Yr:.3f}" + (f" / Z={elev_ll:.3f}m" if elev_ll else "")})
+                                      "tooltip":f"X={Xr:.4f} / Y={Yr:.4f}" + (f" / Z={elev_ll:.4f}m" if elev_ll else "")})
                     csv_rows2.append(
-                        f"{pt['name']},{fmt_decimal(lv)},{fmt_decimal(lov)},{hv:.3f},"
+                        f"{pt['name']},{fmt_decimal(lv)},{fmt_decimal(lov)},{hv:.4f},"
                         + f"{Xr:.4f},{Yr:.4f},"
-                        + (f"{elev_ll:.3f}" if elev_ll is not None else "") + ","
+                        + (f"{elev_ll:.4f}" if elev_ll is not None else "") + ","
                         + f"{Z}"
                     )
 
@@ -1454,7 +1454,7 @@ with tab1:
                             f"<div class='rc-sub'>{fmt_decimal(lon_dd)} deg</div></div>",
                             unsafe_allow_html=True)
                     with rc3:
-                        hc_str = f"{h_cvt_v:.3f} m" if h_cvt_v is not None else "---"
+                        hc_str = f"{h_cvt_v:.4f} m" if h_cvt_v is not None else "---"
                         hc_sub = "楕円体高（そのまま）" if h_cvt_v is not None else "未入力"
                         st.markdown(
                             f"<div class='rc'><div class='rc-lbl' style='color:#8b5cf6'>楕円体高 h (m)</div>"
@@ -1472,14 +1472,14 @@ with tab1:
 
                     h_cvt_raw2 = st.session_state.get(f"cvt_h_{i}", "")
                     h_cvt_v2 = float(h_cvt_raw2) if h_cvt_raw2.strip() else None
-                    tip_h = f" / h={h_cvt_v2:.3f}m" if h_cvt_v2 is not None else ""
+                    tip_h = f" / h={h_cvt_v2:.4f}m" if h_cvt_v2 is not None else ""
                     map_rowsc.append({"name":pt["name"],"lat":lat_dd,"lon":lon_dd,
                                       "tooltip":f"{lat_out} / {lon_out}{tip_h}"})
                     h_cvt = st.session_state.get(f"cvt_h_{i}", "")
                     h_cvt_val = float(h_cvt) if h_cvt.strip() else ""
                     csv_rowsc.append(
                         f"{pt['name']},{pt['lat']},{pt['lon']},"
-                        + (f"{h_cvt_val:.3f}" if isinstance(h_cvt_val, float) else "") + ","
+                        + (f"{h_cvt_val:.4f}" if isinstance(h_cvt_val, float) else "") + ","
                         + f"{lat_out},{lon_out}"
                     )
                 except (ValueError, Exception) as ex:
@@ -1537,6 +1537,24 @@ with tab2:
 
     col_in  = _col_in_jpc  if dir2 == "平面直角 → 緯度経度" else _col_in_ll
     note_in = _in_note_jpc if dir2 == "平面直角 → 緯度経度" else _in_note_ll
+
+    # 往復変換する場合の注意説明
+    _roundtrip_note = ""
+    if dir2 == "緯度経度 → 平面直角":
+        _roundtrip_note = """
+<div style='background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:10px 14px;margin-bottom:10px'>
+  <div style='font-size:11px;font-weight:700;color:#92400e;margin-bottom:4px'>⚠️ 往復変換（JPC→LL→JPC）をする場合の注意</div>
+  <div style='font-size:10.5px;color:#78350f;line-height:1.8'>
+    <b>平面直角 → 緯度経度</b> で出力された緯度経度をそのまま <b>緯度経度 → 平面直角</b> に入力した場合、<br>
+    元のXY座標と数mm程度の差が生じることがあります。<br>
+    <b>原因：</b>緯度経度の小数桁数が不足すると丸め誤差が積み重なるためです。<br>
+    例）小数8桁の緯度経度を逆変換すると → XY誤差 約3〜11mm<br>
+    <b>往復精度を上げるには</b>出力フォーマットを <b>DD.DDDDDDDD°（十進角度）</b> にして<br>
+    小数8桁以上の緯度経度をそのまま入力してください。
+  </div>
+</div>"""
+
+    st.markdown(_roundtrip_note, unsafe_allow_html=True)
 
     st.markdown(f"""
 <div style='display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px'>
@@ -1610,10 +1628,10 @@ with tab2:
                             import time as _t; _t.sleep(0.15)
                         out_x   = f"{Xv:.4f}"
                         out_y   = f"{Yv:.4f}"
-                        out_z   = f"{Zv:.3f}" if Zv is not None else ""
+                        out_z   = f"{Zv:.4f}" if Zv is not None else ""
                         out_lat = format_angle(lat_dd, FMT_B2)
                         out_lon = format_angle(lon_dd, FMT_B2)
-                        out_h   = f"{ellH:.3f}" if ellH is not None else ""
+                        out_h   = f"{ellH:.4f}" if ellH is not None else ""
                         out_n   = f"{N:.4f}" if N is not None else ""
                         _detected_fmt = ""
 
@@ -1639,10 +1657,10 @@ with tab2:
                             elev_b = hv
                         out_x   = f"{Xr:.4f}"
                         out_y   = f"{Yr:.4f}"
-                        out_z   = f"{elev_b:.3f}" if elev_b is not None else ""
+                        out_z   = f"{elev_b:.4f}" if elev_b is not None else ""
                         out_lat = format_angle(lv, FMT_B2)
                         out_lon = format_angle(lov, FMT_B2)
-                        out_h   = f"{hv:.3f}" if hv is not None else ""
+                        out_h   = f"{hv:.4f}" if hv is not None else ""
                         out_n   = f"{N_b:.4f}" if N_b is not None else ""
                         _detected_fmt = _fmt_lat
 
