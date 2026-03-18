@@ -7,6 +7,7 @@ Kawase (2011) 高精度ガウス・クリューゲル投影
 
 import math
 import io
+import csv
 import json
 import re
 import time
@@ -288,6 +289,14 @@ def parse_angle(val: str, fk: str) -> float:
         return float(s.replace("gon","").strip())*9/10
 
     return float(s)
+
+
+def csv_row(*fields) -> str:
+    """CSV行を生成。点名にカンマ等が含まれても正しくクォートする。"""
+    buf = io.StringIO()
+    writer = csv.writer(buf, quoting=csv.QUOTE_MINIMAL, lineterminator="")
+    writer.writerow([str(f) for f in fields])
+    return buf.getvalue()
 
 
 def auto_parse_angle(val: str) -> tuple[float, str]:
@@ -1072,12 +1081,12 @@ with tab1:
                     tip = f"Z={Zv:.4f}m / N={N:.4f}m / h={ellH:.4f}m" if ellH is not None else fmt_decimal(lat_dd)
                     map_rows.append({"name":pt["name"],"lat":lat_dd,"lon":lon_dd,"tooltip":tip})
                     # A=点名, B=緯度, C=経度, D=楕円体高
-                    csv_rows.append(",".join([
-                        str(pt["name"]),
+                    csv_rows.append(csv_row(
+                        pt["name"],
                         format_angle(lat_dd, FMT_JPC),
                         format_angle(lon_dd, FMT_JPC),
                         f"{ellH:.4f}" if ellH is not None else "",
-                    ]))
+                    ))
                 except (ValueError, Exception) as ex:
                     st.error(f"[{pt['name']}] エラー: {ex}")
 
@@ -1256,12 +1265,12 @@ with tab1:
                     map_rows2.append({"name":pt["name"],"lat":lv,"lon":lov,
                                       "tooltip":f"X={Xr:.4f} / Y={Yr:.4f}" + (f" / Z={elev_ll:.4f}m" if elev_ll else "")})
                     # A=点名, B=X, C=Y, D=Z標高
-                    csv_rows2.append(",".join([
-                        str(pt["name"]),
+                    csv_rows2.append(csv_row(
+                        pt["name"],
                         f"{Xr:.4f}",
                         f"{Yr:.4f}",
                         f"{elev_ll:.4f}" if elev_ll is not None else "",
-                    ]))
+                    ))
 
                 except (ValueError, Exception) as ex:
                     st.error(f"[{pt['name']}] エラー: {ex}")
@@ -1464,12 +1473,12 @@ with tab1:
                     h_cvt = st.session_state.get(f"cvt_h_{i}", "")
                     h_cvt_val = float(h_cvt) if h_cvt.strip() else None
                     # A=点名, B=緯度, C=経度, D=楕円体高
-                    csv_rowsc.append(",".join([
-                        str(pt["name"]),
+                    csv_rowsc.append(csv_row(
+                        pt["name"],
                         lat_out,
                         lon_out,
                         f"{h_cvt_val:.4f}" if h_cvt_val is not None else "",
-                    ]))
+                    ))
                 except (ValueError, Exception) as ex:
                     st.error(f"[{pt['name']}] エラー: {ex}")
 
