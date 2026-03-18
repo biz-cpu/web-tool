@@ -281,227 +281,6 @@ def parse_angle(val: str, fk: str) -> float:
 
     return float(s)
 
-# ─────────────────────────────────────────────────────────
-# 写真OCR：Claude Vision API で座標値を読み取る
-# ─────────────────────────────────────────────────────────
-
-def ocr_image_to_points(image_bytes: bytes, mime_type: str, mode: str) -> list[dict]:
-    """
-    写真から座標データを読み取る。
-    requests で Anthropic API に直接 HTTP POST する方式。
-    APIキーは st.secrets["ANTHROPIC_API_KEY"] または環境変数から取得。
-    """
-    import base64, json, re as _re, os, requests as _req
-
-    b64 = base64.standard_b64encode(image_bytes).decode()
-
-    if mode == "jpc":
-        field_desc = "点名(name), X座標(x), Y座標(y), Z標高(z)"
-        json_schema = '{"points":[{"name":"","x":"","y":"","z":""}]}'
-        hint = "平面直角座標（X北が正・Y東が正・Z標高、単位m）"
-    else:
-        field_desc = "点名(name), 緯度(lat), 経度(lon), 楕円体高(h)"
-        json_schema = '{"points":[{"name":"","lat":"","lon":"","h":""}]}'
-        hint = "緯度・経度・楕円体高（h）"
-
-    prompt = f"""この画像から測量・GNSSデータの数値を読み取ってください。
-読み取り対象: {hint}
-各点の {field_desc} を抽出してください。
-
-- 数値は画像に表示されている通りに読み取る（単位は不要、数値のみ）
-- 点名が不明な場合は "pt1", "pt2"... と連番
-- 空欄・不明な値は "" (空文字)
-- 複数点ある場合はすべて抽出
-
-以下のJSONフォーマットのみで回答してください（前後の説明不要）:
-{json_schema}
-"""
-
-    # APIキー取得: secrets → 環境変数の順
-    api_key = ""
-    try:
-        api_key = st.secrets["ANTHROPIC_API_KEY"]
-    except Exception:
-        pass
-    if not api_key:
-        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    if not api_key:
-        raise ValueError(
-            "APIキーが未設定です。\n"
-            "Streamlit Cloud の Settings → Secrets に\n"
-            "ANTHROPIC_API_KEY = \"sk-ant-...\"\n"
-            "を追加してください。"
-        )
-
-    # requests で直接 Anthropic API を呼び出す（SDK不要）
-    headers = {
-        "x-api-key": api_key,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-    }
-    payload = {
-        "model": "claude-opus-4-5",
-        "max_tokens": 1000,
-        "messages": [{
-            "role": "user",
-            "content": [
-                {
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": mime_type,
-                        "data": b64,
-                    },
-                },
-                {"type": "text", "text": prompt},
-            ],
-        }],
-    }
-
-    resp = None
-    try:
-        resp = _req.post(
-            "https://api.anthropic.com/v1/messages",
-            headers=headers,
-            json=payload,
-            timeout=60,
-        )
-        # HTTPエラーの詳細を先に取得してから raise
-        if not resp.ok:
-            raise ValueError(
-                f"APIエラー (HTTP {resp.status_code})\n"
-                f"{resp.text[:400]}"
-            )
-        rjson = resp.json()
-        raw = rjson["content"][0]["text"].strip()
-
-        # JSON 部分を抽出（コードブロック・前後テキストを除去）
-        m = _re.search(r'\{.*\}', raw, _re.DOTALL)
-        if m:
-            data = json.loads(m.group())
-            return data.get("points", [])
-        raise ValueError(f"JSONが返されませんでした:\n{raw[:300]}")
-
-    except ValueError:
-        raise
-    except _req.exceptions.ConnectionError:
-        raise ValueError(
-            "接続エラー: Anthropic API に到達できません。\n"
-            "Streamlit Cloud のネットワーク設定か API キーを確認してください。"
-        )
-    except _req.exceptions.Timeout:
-        raise ValueError("タイムアウト: 画像が大きすぎるか、応答が遅延しています。")
-    except Exception as e:
-        raise ValueError(f"予期しないエラー ({type(e).__name__}):\n{e}")
-
-
-def camera_ocr_button(mode: str, row_idx: int):
-    """列内に 📷 ボタンだけ描画。タップで open フラグを反転。"""
-    open_key = f"cam_open_{mode}_{row_idx}"
-    if open_key not in st.session_state:
-        st.session_state[open_key] = False
-    if st.button("📷", key=f"cam_btn_{mode}_{row_idx}",
-                 help="カメラで撮影して読み取る"):
-        st.session_state[open_key] = not st.session_state[open_key]
-        st.rerun()
-
-
-def camera_ocr_panel(mode: str, row_idx: int):
-    """
-    📷ボタンの直下にフル幅で展開する写真アップロード＋OCRパネル。
-    ・1点モード: row_idx の行にのみ反映
-    ・複数点モード: 写真に写っている点をすべて読み取り、pts_key 全体を更新
-    """
-    open_key = f"cam_open_{mode}_{row_idx}"
-    if not st.session_state.get(open_key, False):
-        return
-
-    fields  = ("name","x","y","z") if mode == "jpc" else ("name","lat","lon","h")
-    pts_key = {"jpc":"pts_jpc","ll":"pts_ll","cvt":"pts_cvt"}[mode]
-    prefix  = mode  # "jpc" | "ll" | "cvt"
-    lbl_fields = "点名・X・Y・Z標高" if mode == "jpc" else "点名・緯度・経度・楕円体高"
-
-    st.markdown(
-        f"<div style='background:#f0f9ff;border:1px solid #bae6fd;"
-        f"border-radius:10px;padding:10px 14px;margin:4px 0 8px'>"
-        f"<b>📷 写真から読み取る</b>"
-        f"<span style='font-size:11px;color:#64748b;margin-left:8px'>"
-        f"{lbl_fields} を読み取ります。複数点も一括対応。</span>"
-        f"</div>",
-        unsafe_allow_html=True
-    )
-
-    uploaded = st.file_uploader(
-        "画像をアップロード（JPG・PNG・HEIC・WebP）",
-        type=["jpg","jpeg","png","heic","webp"],
-        key=f"photo_{mode}_{row_idx}",
-        label_visibility="collapsed",
-    )
-
-    if uploaded is not None:
-        # MIMEタイプ判定
-        ext = uploaded.name.lower().rsplit(".", 1)[-1]
-        mime_map = {"jpg":"image/jpeg","jpeg":"image/jpeg",
-                    "png":"image/png","webp":"image/webp","heic":"image/jpeg"}
-        mime = mime_map.get(ext, "image/jpeg")
-
-        col_img, col_act = st.columns([3, 1])
-        with col_img:
-            st.image(uploaded, use_container_width=True)
-        with col_act:
-            st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-            if st.button("🔍 読み取り実行", key=f"ocr_run_{mode}_{row_idx}",
-                         use_container_width=True):
-                with st.spinner("AI解析中..."):
-                    try:
-                        img_bytes = uploaded.getvalue()
-                        pts_data = ocr_image_to_points(img_bytes, mime, mode)
-
-                        if not pts_data:
-                            st.error("読み取れませんでした。数値が写った部分を正面から撮影してください。")
-                        else:
-                            # 複数点を読み取った場合は pts_key 全体を更新
-                            # 1点しかなければ row_idx の行だけ更新
-                            template = ({"name":"","x":"","y":"","z":""}
-                                        if mode == "jpc"
-                                        else {"name":"","lat":"","lon":"","h":""})
-
-                            if len(pts_data) > 1:
-                                # 全点更新
-                                new_pts = []
-                                for p in pts_data:
-                                    pt = dict(template)
-                                    for f in fields:
-                                        pt[f] = str(p.get(f, "")).strip()
-                                    new_pts.append(pt)
-                                st.session_state[pts_key] = new_pts
-                                for i, pt in enumerate(new_pts):
-                                    for f in fields:
-                                        st.session_state[f"{prefix}_{f}_{i}"] = pt[f]
-                                n = len(new_pts)
-                            else:
-                                # 1点: row_idx の行だけ更新
-                                p = pts_data[0]
-                                while len(st.session_state[pts_key]) <= row_idx:
-                                    st.session_state[pts_key].append(dict(template))
-                                for f in fields:
-                                    val = str(p.get(f, "")).strip()
-                                    st.session_state[pts_key][row_idx][f] = val
-                                    st.session_state[f"{prefix}_{f}_{row_idx}"] = val
-                                n = 1
-
-                            st.session_state[open_key] = False
-                            st.success(f"✅ {n} 点を読み取りました")
-                            st.rerun()
-
-                    except ValueError as e:
-                        st.error(str(e))
-
-            if st.button("✕ 閉じる", key=f"cam_close_{mode}_{row_idx}",
-                         use_container_width=True):
-                st.session_state[open_key] = False
-                st.rerun()
-
 
 def auto_parse_angle(val: str) -> tuple[float, str]:
     """
@@ -1159,11 +938,7 @@ with tab1:
         pts = st.session_state["pts_jpc"]
         del_idx = None
         for i, pt in enumerate(pts):
-            cam_col, c0, c1, c2, c3, c4, c5 = st.columns([0.45,0.5,1.4,2,2,2,0.45])
-            with cam_col:
-                if i == 0:
-                    st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
-                camera_ocr_button("jpc", i)
+            c0, c1, c2, c3, c4, c5 = st.columns([0.6,1.4,2,2,2,0.45])
             with c0:
                 toppad = "32" if i==0 else "8"
                 st.markdown(
@@ -1189,9 +964,6 @@ with tab1:
                     st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
                 if st.button("✕", key=f"del_jpc_{i}", disabled=len(pts)==1):
                     del_idx = i
-            # カメラパネルを各行のすぐ下に展開（全幅）
-            camera_ocr_panel("jpc", i)
-
         if del_idx is not None:
             _read_jpc()
             new_pts = [p for j,p in enumerate(st.session_state["pts_jpc"]) if j != del_idx]
@@ -1354,11 +1126,7 @@ with tab1:
         pts2 = st.session_state["pts_ll"]
         del_idx2 = None
         for i, pt in enumerate(pts2):
-            cam_col, c0, c1, c2, c3, c4, c5 = st.columns([0.45,0.5,1.4,2.3,2.3,1.8,0.45])
-            with cam_col:
-                if i == 0:
-                    st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
-                camera_ocr_button("ll", i)
+            c0, c1, c2, c3, c4, c5 = st.columns([0.6,1.4,2.3,2.3,1.8,0.45])
             with c0:
                 toppad = "32" if i==0 else "8"
                 st.markdown(
@@ -1386,9 +1154,6 @@ with tab1:
                     st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
                 if st.button("✕", key=f"del_ll_{i}", disabled=len(pts2)==1):
                     del_idx2 = i
-            # カメラパネルを各行のすぐ下に展開（全幅）
-            camera_ocr_panel("ll", i)
-
         if del_idx2 is not None:
             _read_ll()
             new_pts2 = [p for j,p in enumerate(st.session_state["pts_ll"]) if j != del_idx2]
@@ -1575,11 +1340,7 @@ with tab1:
         pts_cvt = st.session_state["pts_cvt"]
         del_idx_c = None
         for i, pt in enumerate(pts_cvt):
-            cam_col, c0, c1, c2, c3, c4, c5 = st.columns([0.45,0.5,1.4,2,2,1.6,0.45])
-            with cam_col:
-                if i == 0:
-                    st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
-                camera_ocr_button("cvt", i)
+            c0, c1, c2, c3, c4, c5 = st.columns([0.6,1.4,2,2,1.6,0.45])
             with c0:
                 toppad = "32" if i==0 else "8"
                 st.markdown(
@@ -1607,8 +1368,6 @@ with tab1:
                     st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
                 if st.button("✕", key=f"del_cvt_{i}", disabled=len(pts_cvt)==1):
                     del_idx_c = i
-            # カメラパネルを各行のすぐ下に展開（全幅）
-            camera_ocr_panel("cvt", i)
         if del_idx_c is not None:
             for i, pt in enumerate(st.session_state["pts_cvt"]):
                 for f in ("name","lat","lon","h"):
