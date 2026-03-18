@@ -721,10 +721,19 @@ section[data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"]{ga
 
     st.divider()
 
-    st.markdown(f"""<div class='acc' style='margin-bottom:4px'>往復誤差 &lt; 0.01mm</div>
-<div style='font-size:10px;color:#475569;line-height:1.6'>
-GRS80 / m₀=0.9999 / Kawase2011
-</div>""", unsafe_allow_html=True)
+    st.markdown("""
+<div style='background:#1e293b;border:1px solid #334155;border-radius:8px;padding:8px 10px;margin:2px 0'>
+  <div style='display:flex;align-items:center;gap:6px;margin-bottom:4px'>
+    <span style='background:#16a34a;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px'>
+      ✓ 往復誤差 &lt; 0.01mm
+    </span>
+  </div>
+  <div style='font-size:10px;color:#94a3b8;line-height:1.7'>
+    GRS80楕円体 / m₀ = 0.9999<br>
+    Kawase (2011) 高次展開式
+  </div>
+</div>
+""", unsafe_allow_html=True)
 
     st.divider()
 
