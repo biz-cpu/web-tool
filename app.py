@@ -207,12 +207,12 @@ def fetch_geoid(lat: float, lon: float, model: str = "JPGEO2024"):
     )
     for attempt in range(3):
         try:
-            r = requests.get(url, timeout=10)
+            r = requests.get(url, timeout=15)
             r.raise_for_status()
             return float(r.json()["OutputData"]["geoidHeight"])
         except Exception:
             if attempt < 2:
-                time.sleep(0.5)
+                time.sleep(1.5 * (attempt + 1))  # 1.5s, 3.0s
     return None
 
 # ═══════════════════════════════════════════════════════
@@ -1613,6 +1613,8 @@ with tab2:
                         lat_dd, lon_dd = res
                         N = None; ellH = None
                         if GEOID_KEY != "NONE" and Zv is not None:
+                            if idx > 0:
+                                time.sleep(0.3)  # API連続呼び出しのレート制限回避
                             N = fetch_geoid(lat_dd, lon_dd, GEOID_KEY)
                             if N is not None:
                                 ellH = Zv + N
@@ -1643,6 +1645,8 @@ with tab2:
                         lat_dd, lon_dd = lv, lov
                         N_b = None; elev_b = None
                         if hv is not None and GEOID_KEY != "NONE":
+                            if idx > 0:
+                                time.sleep(0.3)  # API連続呼び出しのレート制限回避
                             N_b = fetch_geoid(lv, lov, GEOID_KEY)
                             if N_b is not None:
                                 elev_b = hv - N_b
