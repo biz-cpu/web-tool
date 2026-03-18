@@ -1093,8 +1093,8 @@ with tab1:
             if map_rows:
                 st.markdown("#### 📍 地図")
                 render_map(map_rows, map_style_lbl, zoom=13)
-                csv_out = "\n".join(csv_rows)
-                st.download_button("📥 全点 CSV ダウンロード", csv_out, "jpc_to_ll.csv", "text/csv")
+                csv_out = "\ufeff" + "\n".join(csv_rows)
+                st.download_button("📥 全点 CSV ダウンロード", csv_out, "jpc_to_ll.csv", "text/csv; charset=utf-8-sig")
         else:
             st.info("X・Y 座標を入力してください。")
 
@@ -1278,8 +1278,8 @@ with tab1:
             if map_rows2:
                 st.markdown("#### 📍 地図")
                 render_map(map_rows2, map_style_lbl, zoom=13)
-                csv_out2 = "\n".join(csv_rows2)
-                st.download_button("📥 全点 CSV ダウンロード", csv_out2, "ll_to_jpc.csv", "text/csv")
+                csv_out2 = "\ufeff" + "\n".join(csv_rows2)
+                st.download_button("📥 全点 CSV ダウンロード", csv_out2, "ll_to_jpc.csv", "text/csv; charset=utf-8-sig")
         else:
             st.info(f"緯度・経度を {in_fmt_lbl} 形式で入力してください。")
 
@@ -1485,8 +1485,8 @@ with tab1:
             if map_rowsc:
                 st.markdown("#### 📍 地図")
                 render_map(map_rowsc, map_style_lbl, zoom=13)
-                csv_outc = "\n".join(csv_rowsc)
-                st.download_button("📥 全点 CSV ダウンロード", csv_outc, "ll_format.csv", "text/csv")
+                csv_outc = "\ufeff" + "\n".join(csv_rowsc)
+                st.download_button("📥 全点 CSV ダウンロード", csv_outc, "ll_format.csv", "text/csv; charset=utf-8-sig")
         else:
             st.info(f"緯度・経度を {in_fmt_cvt_lbl} 形式で入力してください。")
 
@@ -1721,8 +1721,8 @@ with tab2:
             ]
             st.download_button(
                 f"📥 結果 CSV ダウンロード（{out_fmt_b2_lbl}）",
-                "\n".join(csv_lines),
-                "batch_result.csv", "text/csv"
+                "\ufeff" + "\n".join(csv_lines),
+                "batch_result.csv", "text/csv; charset=utf-8-sig"
             )
 
         except Exception as ex:
