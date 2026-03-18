@@ -698,6 +698,18 @@ section[data-testid="stSidebar"] .element-container{margin-bottom:0!important;}
 section[data-testid="stSidebar"] hr{margin:6px 0!important;}
 section[data-testid="stSidebar"] .stSelectbox{margin-bottom:0!important;}
 section[data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"]{gap:0!important;}
+
+/* ── selectbox は文字入力禁止（プルダウン選択のみ）── */
+section[data-testid="stSidebar"] .stSelectbox input {
+  pointer-events: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  caret-color: transparent !important;
+  cursor: pointer !important;
+}
+section[data-testid="stSidebar"] .stSelectbox [role="combobox"] {
+  cursor: pointer !important;
+}
 </style>""", unsafe_allow_html=True)
 
     st.markdown("<div style='font-size:15px;font-weight:700;color:#f1f5f9;padding:4px 0 6px'>⚙️ 共通設定</div>", unsafe_allow_html=True)
