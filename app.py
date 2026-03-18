@@ -2108,91 +2108,84 @@ A. 変換結果の下に表示される **「📄 ファイル名」** 入力欄
     st.markdown("---")
     st.caption("© 2026 biz-cpu　｜　GNSS SmartShift ICT　｜　Kawase (2011) 高次ガウス・クリューゲル展開式")
 
-# ── ページトップへ戻るボタン（固定表示） ──
-st.markdown("""
-<style>
-#back-to-top {
-  position: fixed;
-  bottom: 28px;
-  right: 18px;
-  z-index: 9999;
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-  color: #fff;
-  border: none;
-  font-size: 20px;
-  line-height: 46px;
-  text-align: center;
-  cursor: pointer;
-  box-shadow: 0 4px 14px rgba(59,130,246,0.5);
-  opacity: 0;
-  transform: translateY(12px);
-  transition: opacity 0.3s, transform 0.3s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-#back-to-top.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-#back-to-top:hover {
-  background: linear-gradient(135deg, #60a5fa, #2563eb);
-  box-shadow: 0 6px 18px rgba(59,130,246,0.7);
-}
-</style>
-<button id="back-to-top" title="ページトップへ戻る">&#8679;</button>
+# ── ページトップへ戻るボタン（parent.document に直接注入）──
+import streamlit.components.v1 as _comp_top
+_comp_top.html("""
 <script>
 (function(){
-  var btn = document.getElementById('back-to-top');
-  if (!btn) return;
+  // すでに注入済みなら何もしない
+  if (window.parent.document.getElementById('gss-back-to-top')) return;
 
-  // スクロール対象は Streamlit のメインコンテナ
-  function getScroller() {
-    return document.querySelector('section.main') ||
-           document.querySelector('.main .block-container') ||
-           window;
+  var p = window.parent.document;
+
+  // スタイル注入
+  var style = p.createElement('style');
+  style.textContent = [
+    '#gss-back-to-top{',
+    '  position:fixed;',
+    '  bottom:32px;',
+    '  left:50%;',
+    '  transform:translateX(-50%) translateY(16px);',
+    '  z-index:99999;',
+    '  width:52px;height:52px;',
+    '  border-radius:50%;',
+    '  background:linear-gradient(135deg,#3b82f6,#1d4ed8);',
+    '  color:#fff;border:none;',
+    '  font-size:24px;line-height:52px;',
+    '  text-align:center;cursor:pointer;',
+    '  box-shadow:0 4px 16px rgba(59,130,246,0.55);',
+    '  opacity:0;',
+    '  transition:opacity .3s,transform .3s;',
+    '  display:flex;align-items:center;justify-content:center;',
+    '}',
+    '#gss-back-to-top.show{opacity:1;transform:translateX(-50%) translateY(0);}',
+    '#gss-back-to-top:hover{background:linear-gradient(135deg,#60a5fa,#2563eb);}'
+  ].join('');
+  p.head.appendChild(style);
+
+  // ボタン注入
+  var btn = p.createElement('button');
+  btn.id = 'gss-back-to-top';
+  btn.title = 'ページトップへ戻る';
+  btn.innerHTML = '&#8679;';
+  p.body.appendChild(btn);
+
+  // スクロール監視
+  function getMain(){
+    return p.querySelector('section[data-testid="stMain"]') ||
+           p.querySelector('.main')  ||
+           p.querySelector('section.main') ||
+           null;
   }
 
-  function onScroll() {
-    var s = getScroller();
-    var top = (s === window) ? window.scrollY : s.scrollTop;
-    if (top > 300) {
-      btn.classList.add('visible');
+  function onScroll(){
+    var main = getMain();
+    var top = main ? main.scrollTop : p.documentElement.scrollTop;
+    if(top > 300){ btn.classList.add('show'); }
+    else          { btn.classList.remove('show'); }
+  }
+
+  btn.addEventListener('click', function(){
+    var main = getMain();
+    if(main){ main.scrollTo({top:0, behavior:'smooth'}); }
+    else    { p.documentElement.scrollTo({top:0, behavior:'smooth'}); }
+  });
+
+  function attach(n){
+    var main = getMain();
+    if(main){
+      main.addEventListener('scroll', onScroll);
     } else {
-      btn.classList.remove('visible');
+      p.addEventListener('scroll', onScroll);
     }
+    if(n > 0 && !getMain()) setTimeout(function(){ attach(n-1); }, 500);
   }
 
-  function scrollToTop() {
-    var s = getScroller();
-    if (s === window) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      s.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  }
-
-  btn.addEventListener('click', scrollToTop);
-
-  // イベント登録（Streamlit の動的ロード完了後に実行）
-  function init(n) {
-    var s = getScroller();
-    if (s && s !== window) {
-      s.addEventListener('scroll', onScroll);
-    }
-    window.addEventListener('scroll', onScroll);
-    if (n > 0 && !document.getElementById('back-to-top')) {
-      setTimeout(function(){ init(n-1); }, 400);
-    }
-  }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function(){ init(10); });
+  if(p.readyState === 'loading'){
+    p.addEventListener('DOMContentLoaded', function(){ attach(10); });
   } else {
-    init(10);
+    attach(10);
   }
 })();
 </script>
-""", unsafe_allow_html=True)
+""", height=0)
