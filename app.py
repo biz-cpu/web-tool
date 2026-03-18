@@ -1077,13 +1077,15 @@ with tab1:
 
                     tip = f"Z={Zv:.4f}m / N={N:.4f}m / h={ellH:.4f}m" if ellH is not None else fmt_decimal(lat_dd)
                     map_rows.append({"name":pt["name"],"lat":lat_dd,"lon":lon_dd,"tooltip":tip})
-                    csv_rows.append(
-                        f"{pt['name']},{Xv},{Yv},"
-                        + (f"{Zv:.4f}" if Zv is not None else "") + ","
-                        + (f"{N:.4f}"  if N  is not None else "") + ","
-                        + (f"{ellH:.4f}" if ellH is not None else "") + ","
-                        + f"{format_angle(lat_dd,FMT_JPC)},{format_angle(lon_dd,FMT_JPC)}"
-                    )
+                    csv_rows.append(",".join([
+                        str(pt["name"]),
+                        f"{Xv:.4f}",
+                        f"{Yv:.4f}",
+                        f"{Zv:.4f}" if Zv is not None else "",
+                        format_angle(lat_dd, FMT_JPC),
+                        format_angle(lon_dd, FMT_JPC),
+                        f"{ellH:.4f}" if ellH is not None else "",
+                    ]))
                 except (ValueError, Exception) as ex:
                     st.error(f"[{pt['name']}] エラー: {ex}")
 
@@ -1091,7 +1093,7 @@ with tab1:
                 st.markdown("#### 📍 地図")
                 render_map(map_rows, map_style_lbl, zoom=13)
                 csv_out = "\n".join(csv_rows)
-                st.download_button("📥 全点 CSV ダウンロード", csv_out, "converted.csv", "text/csv")
+                st.download_button("📥 全点 CSV ダウンロード", csv_out, "jpc_to_ll.csv", "text/csv")
         else:
             st.info("X・Y 座標を入力してください。")
 
@@ -1261,12 +1263,16 @@ with tab1:
 
                     map_rows2.append({"name":pt["name"],"lat":lv,"lon":lov,
                                       "tooltip":f"X={Xr:.4f} / Y={Yr:.4f}" + (f" / Z={elev_ll:.4f}m" if elev_ll else "")})
-                    csv_rows2.append(
-                        f"{pt['name']},{fmt_decimal(lv)},{fmt_decimal(lov)},{hv:.4f},"
-                        + f"{Xr:.4f},{Yr:.4f},"
-                        + (f"{elev_ll:.4f}" if elev_ll is not None else "") + ","
-                        + f"{Z}"
-                    )
+                    # A=点名, B=X, C=Y, D=Z標高, E=緯度, F=経度, G=楕円体高
+                    csv_rows2.append(",".join([
+                        str(pt["name"]),
+                        f"{Xr:.4f}",
+                        f"{Yr:.4f}",
+                        f"{elev_ll:.4f}" if elev_ll is not None else "",
+                        fmt_decimal(lv),   # E=緯度（十進角度8桁）
+                        fmt_decimal(lov),  # F=経度（十進角度8桁）
+                        f"{hv:.4f}" if pt["h"].strip() else "",  # G=楕円体高
+                    ]))
 
                 except (ValueError, Exception) as ex:
                     st.error(f"[{pt['name']}] エラー: {ex}")
@@ -1275,7 +1281,7 @@ with tab1:
                 st.markdown("#### 📍 地図")
                 render_map(map_rows2, map_style_lbl, zoom=13)
                 csv_out2 = "\n".join(csv_rows2)
-                st.download_button("📥 全点 CSV ダウンロード", csv_out2, "converted.csv", "text/csv")
+                st.download_button("📥 全点 CSV ダウンロード", csv_out2, "ll_to_jpc.csv", "text/csv")
         else:
             st.info(f"緯度・経度を {in_fmt_lbl} 形式で入力してください。")
 
@@ -1473,12 +1479,16 @@ with tab1:
                     map_rowsc.append({"name":pt["name"],"lat":lat_dd,"lon":lon_dd,
                                       "tooltip":f"{lat_out} / {lon_out}{tip_h}"})
                     h_cvt = st.session_state.get(f"cvt_h_{i}", "")
-                    h_cvt_val = float(h_cvt) if h_cvt.strip() else ""
-                    csv_rowsc.append(
-                        f"{pt['name']},{pt['lat']},{pt['lon']},"
-                        + (f"{h_cvt_val:.4f}" if isinstance(h_cvt_val, float) else "") + ","
-                        + f"{lat_out},{lon_out}"
-                    )
+                    h_cvt_val = float(h_cvt) if h_cvt.strip() else None
+                    csv_rowsc.append(",".join([
+                        str(pt["name"]),
+                        "",   # X（平面直角なし）
+                        "",   # Y
+                        "",   # Z標高
+                        lat_out,
+                        lon_out,
+                        f"{h_cvt_val:.4f}" if h_cvt_val is not None else "",
+                    ]))
                 except (ValueError, Exception) as ex:
                     st.error(f"[{pt['name']}] エラー: {ex}")
 
@@ -1486,7 +1496,7 @@ with tab1:
                 st.markdown("#### 📍 地図")
                 render_map(map_rowsc, map_style_lbl, zoom=13)
                 csv_outc = "\n".join(csv_rowsc)
-                st.download_button("📥 全点 CSV ダウンロード", csv_outc, "converted_fmt.csv", "text/csv")
+                st.download_button("📥 全点 CSV ダウンロード", csv_outc, "ll_format.csv", "text/csv")
         else:
             st.info(f"緯度・経度を {in_fmt_cvt_lbl} 形式で入力してください。")
 
