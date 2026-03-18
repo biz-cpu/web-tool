@@ -287,10 +287,11 @@ def parse_angle(val: str, fk: str) -> float:
 
 def ocr_image_to_points(image_bytes: bytes, mime_type: str, mode: str) -> list[dict]:
     """
-    写真から座標データを読み取る（Anthropic SDK 使用）。
-    APIキーは st.secrets["ANTHROPIC_API_KEY"] または環境変数 ANTHROPIC_API_KEY から取得。
+    写真から座標データを読み取る。
+    requests で Anthropic API に直接 HTTP POST する方式。
+    APIキーは st.secrets["ANTHROPIC_API_KEY"] または環境変数から取得。
     """
-    import base64, json, re as _re
+    import base64, json, re as _re, os, requests as _req
 
     b64 = base64.standard_b64encode(image_bytes).decode()
 
@@ -316,11 +317,9 @@ def ocr_image_to_points(image_bytes: bytes, mime_type: str, mode: str) -> list[d
 {json_schema}
 """
 
-    # APIキー取得: secrets → 環境変数の順に試みる
-    import os
+    # APIキー取得: secrets → 環境変数の順
     api_key = ""
     try:
-        # st.secrets は dict-like だが .get() が使えない場合があるため [] でアクセス
         api_key = st.secrets["ANTHROPIC_API_KEY"]
     except Exception:
         pass
@@ -334,46 +333,61 @@ def ocr_image_to_points(image_bytes: bytes, mime_type: str, mode: str) -> list[d
             "を追加してください。"
         )
 
-    try:
-        import anthropic
-        client = anthropic.Anthropic(api_key=api_key)
-        msg = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=1000,
-            messages=[{
-                "role": "user",
-                "content": [
-                    {
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": mime_type,
-                            "data": b64,
-                        },
+    # requests で直接 Anthropic API を呼び出す（SDK不要）
+    headers = {
+        "x-api-key": api_key,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+    }
+    payload = {
+        "model": "claude-opus-4-5",
+        "max_tokens": 1000,
+        "messages": [{
+            "role": "user",
+            "content": [
+                {
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": mime_type,
+                        "data": b64,
                     },
-                    {"type": "text", "text": prompt},
-                ],
-            }],
+                },
+                {"type": "text", "text": prompt},
+            ],
+        }],
+    }
+
+    try:
+        resp = _req.post(
+            "https://api.anthropic.com/v1/messages",
+            headers=headers,
+            json=payload,
+            timeout=60,
         )
-        raw = msg.content[0].text.strip()
-        # JSON 部分を抽出（コードブロック等を除去）
-        m = _re.search(r'\{[^{}]*"points"[^{}]*\[.*?\][^{}]*\}', raw, _re.DOTALL)
-        if not m:
-            m = _re.search(r'\{.*\}', raw, _re.DOTALL)
+        resp.raise_for_status()
+        raw = resp.json()["content"][0]["text"].strip()
+
+        # JSON 部分を抽出（コードブロック・前後テキストを除去）
+        m = _re.search(r'\{.*\}', raw, _re.DOTALL)
         if m:
             data = json.loads(m.group())
             return data.get("points", [])
-        raise ValueError(f"JSONが返されませんでした: {raw[:200]}")
-    except ImportError:
+        raise ValueError(f"JSONが返されませんでした: {raw[:300]}")
+
+    except _req.exceptions.ConnectionError as e:
         raise ValueError(
-            "anthropic ライブラリが見つかりません。\n"
-            "requirements.txt に anthropic を追加してください。"
+            f"接続エラー: Anthropic API に接続できません。\n"
+            f"ネットワーク設定を確認してください。\n詳細: {e}"
         )
+    except _req.exceptions.HTTPError as e:
+        status = resp.status_code if resp else "?"
+        body = resp.text[:200] if resp else ""
+        raise ValueError(f"HTTP {status} エラー: {body}")
     except ValueError:
         raise
     except Exception as e:
-        raise ValueError(f"API呼び出しエラー: {type(e).__name__}: {e}")
-    return []
+        raise ValueError(f"予期しないエラー: {type(e).__name__}: {e}")
 
 
 def camera_ocr_button(mode: str, row_idx: int):
