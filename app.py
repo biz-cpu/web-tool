@@ -358,6 +358,7 @@ def ocr_image_to_points(image_bytes: bytes, mime_type: str, mode: str) -> list[d
         }],
     }
 
+    resp = None
     try:
         resp = _req.post(
             "https://api.anthropic.com/v1/messages",
@@ -365,29 +366,33 @@ def ocr_image_to_points(image_bytes: bytes, mime_type: str, mode: str) -> list[d
             json=payload,
             timeout=60,
         )
-        resp.raise_for_status()
-        raw = resp.json()["content"][0]["text"].strip()
+        # HTTPエラーの詳細を先に取得してから raise
+        if not resp.ok:
+            raise ValueError(
+                f"APIエラー (HTTP {resp.status_code})\n"
+                f"{resp.text[:400]}"
+            )
+        rjson = resp.json()
+        raw = rjson["content"][0]["text"].strip()
 
         # JSON 部分を抽出（コードブロック・前後テキストを除去）
         m = _re.search(r'\{.*\}', raw, _re.DOTALL)
         if m:
             data = json.loads(m.group())
             return data.get("points", [])
-        raise ValueError(f"JSONが返されませんでした: {raw[:300]}")
+        raise ValueError(f"JSONが返されませんでした:\n{raw[:300]}")
 
-    except _req.exceptions.ConnectionError as e:
-        raise ValueError(
-            f"接続エラー: Anthropic API に接続できません。\n"
-            f"ネットワーク設定を確認してください。\n詳細: {e}"
-        )
-    except _req.exceptions.HTTPError as e:
-        status = resp.status_code if resp else "?"
-        body = resp.text[:200] if resp else ""
-        raise ValueError(f"HTTP {status} エラー: {body}")
     except ValueError:
         raise
+    except _req.exceptions.ConnectionError:
+        raise ValueError(
+            "接続エラー: Anthropic API に到達できません。\n"
+            "Streamlit Cloud のネットワーク設定か API キーを確認してください。"
+        )
+    except _req.exceptions.Timeout:
+        raise ValueError("タイムアウト: 画像が大きすぎるか、応答が遅延しています。")
     except Exception as e:
-        raise ValueError(f"予期しないエラー: {type(e).__name__}: {e}")
+        raise ValueError(f"予期しないエラー ({type(e).__name__}):\n{e}")
 
 
 def camera_ocr_button(mode: str, row_idx: int):
