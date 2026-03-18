@@ -385,7 +385,7 @@ def render_map(points: list[dict], map_style_key: str, zoom: int = 13):
     z    = zoom if len(points) == 1 else max(8, zoom - 3)
 
     # ピンデータをJSONに
-    pins_js = _json.dumps([
+    pins_js = json.dumps([
         {
             "name": p["name"],
             "lat":  p["lat"],
