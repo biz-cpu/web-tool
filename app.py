@@ -193,18 +193,26 @@ def jpc_to_latlon(X, Y, zone):
 # ═══════════════════════════════════════════════════════
 
 @st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=86400, show_spinner=False)
 def fetch_geoid(lat: float, lon: float, model: str = "JPGEO2024"):
+    """国土地理院ジオイド高API。失敗時は最大3回リトライ。"""
     if model == "NONE": return 0.0
     select = "0" if model == "JPGEO2024" else "1"
     url = (
         "https://vldb.gsi.go.jp/sokuchi/surveycalc/geoid/calcgh/cgi/geoidcalc.pl"
         f"?select={select}&tanni=1&outputType=json&latitude={lat:.8f}&longitude={lon:.8f}"
     )
-    try:
-        r = requests.get(url, timeout=8)
-        return float(r.json()["OutputData"]["geoidHeight"])
-    except Exception:
-        return None
+    import time
+    for attempt in range(4):  # 最大4回試行
+        try:
+            r = requests.get(url, timeout=20)
+            r.raise_for_status()
+            val = r.json()["OutputData"]["geoidHeight"]
+            return float(val)
+        except Exception:
+            if attempt < 3:
+                time.sleep(0.8 * (attempt + 1))  # 0.8s, 1.6s, 2.4s と増やす
+    return None
 
 # ═══════════════════════════════════════════════════════
 # 4. 角度フォーマット（入力パース + 出力フォーマット）
@@ -1592,6 +1600,9 @@ with tab2:
                                 ellH = Zv  # N取得失敗時はZをそのまま楕円体高として使用
                         elif Zv is not None:
                             ellH = Zv
+                        # API連続呼び出しのレート制限を避けるための短い待機
+                        if GEOID_KEY != "NONE" and Zv is not None:
+                            import time as _t; _t.sleep(0.15)
                         out_x   = f"{Xv:.4f}"
                         out_y   = f"{Yv:.4f}"
                         out_z   = f"{Zv:.3f}" if Zv is not None else ""
@@ -1612,10 +1623,13 @@ with tab2:
                         if res is None: raise ValueError(f"系番号 {Z} が無効")
                         Xr, Yr = res
                         lat_dd, lon_dd = lv, lov
-                        elev_b = None
+                        N_b = None; elev_b = None
                         if hv is not None and GEOID_KEY != "NONE":
                             N_b = fetch_geoid(lv, lov, GEOID_KEY)
-                            if N_b is not None: elev_b = hv - N_b
+                            if N_b is not None:
+                                elev_b = hv - N_b
+                            else:
+                                elev_b = hv  # N取得失敗時はhをそのまま使用
                         elif hv is not None:
                             elev_b = hv
                         out_x   = f"{Xr:.4f}"
@@ -1624,7 +1638,7 @@ with tab2:
                         out_lat = format_angle(lv, FMT_B2)
                         out_lon = format_angle(lov, FMT_B2)
                         out_h   = f"{hv:.3f}" if hv is not None else ""
-                        out_n   = f"{N_b:.4f}" if ('N_b' in dir() and N_b is not None) else ""
+                        out_n   = f"{N_b:.4f}" if N_b is not None else ""
                         _detected_fmt = _fmt_lat
 
                     _fmt_labels = {
