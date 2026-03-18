@@ -287,12 +287,10 @@ def parse_angle(val: str, fk: str) -> float:
 
 def ocr_image_to_points(image_bytes: bytes, mime_type: str, mode: str) -> list[dict]:
     """
-    写真から座標データを読み取る。
-    mode: "jpc" | "ll" | "cvt"
-    返値: 点リスト [{"name":..,"x":..,"y":..,"z":..}, ...]  または
-          [{"name":..,"lat":..,"lon":..,"h":..}, ...]
+    写真から座標データを読み取る（Anthropic SDK 使用）。
+    APIキーは st.secrets["ANTHROPIC_API_KEY"] または環境変数 ANTHROPIC_API_KEY から取得。
     """
-    import base64, json, requests as _req
+    import base64, json, re as _re
 
     b64 = base64.standard_b64encode(image_bytes).decode()
 
@@ -300,11 +298,7 @@ def ocr_image_to_points(image_bytes: bytes, mime_type: str, mode: str) -> list[d
         field_desc = "点名(name), X座標(x), Y座標(y), Z標高(z)"
         json_schema = '{"points":[{"name":"","x":"","y":"","z":""}]}'
         hint = "平面直角座標（X北が正・Y東が正・Z標高、単位m）"
-    elif mode == "ll":
-        field_desc = "点名(name), 緯度(lat), 経度(lon), 楕円体高(h)"
-        json_schema = '{"points":[{"name":"","lat":"","lon":"","h":""}]}'
-        hint = "緯度・経度・楕円体高（h）"
-    else:  # cvt
+    else:
         field_desc = "点名(name), 緯度(lat), 経度(lon), 楕円体高(h)"
         json_schema = '{"points":[{"name":"","lat":"","lon":"","h":""}]}'
         hint = "緯度・経度・楕円体高（h）"
@@ -322,37 +316,63 @@ def ocr_image_to_points(image_bytes: bytes, mime_type: str, mode: str) -> list[d
 {json_schema}
 """
 
+    # APIキー取得: secrets → 環境変数の順に試みる
+    import os
+    api_key = ""
     try:
-        resp = _req.post(
-            "https://api.anthropic.com/v1/messages",
-            headers={"Content-Type": "application/json"},
-            json={
-                "model": "claude-sonnet-4-6",
-                "max_tokens": 1000,
-                "messages": [{
-                    "role": "user",
-                    "content": [
-                        {"type": "image", "source": {
+        # st.secrets は dict-like だが .get() が使えない場合があるため [] でアクセス
+        api_key = st.secrets["ANTHROPIC_API_KEY"]
+    except Exception:
+        pass
+    if not api_key:
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        raise ValueError(
+            "APIキーが未設定です。\n"
+            "Streamlit Cloud の Settings → Secrets に\n"
+            "ANTHROPIC_API_KEY = \"sk-ant-...\"\n"
+            "を追加してください。"
+        )
+
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=api_key)
+        msg = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=1000,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {
                             "type": "base64",
                             "media_type": mime_type,
                             "data": b64,
-                        }},
-                        {"type": "text", "text": prompt},
-                    ]
-                }]
-            },
-            timeout=30
+                        },
+                    },
+                    {"type": "text", "text": prompt},
+                ],
+            }],
         )
-        resp.raise_for_status()
-        raw = resp.json()["content"][0]["text"].strip()
-        # JSON部分を抽出
-        import re as _re
-        m = _re.search(r'\{.*\}', raw, _re.DOTALL)
+        raw = msg.content[0].text.strip()
+        # JSON 部分を抽出（コードブロック等を除去）
+        m = _re.search(r'\{[^{}]*"points"[^{}]*\[.*?\][^{}]*\}', raw, _re.DOTALL)
+        if not m:
+            m = _re.search(r'\{.*\}', raw, _re.DOTALL)
         if m:
             data = json.loads(m.group())
             return data.get("points", [])
+        raise ValueError(f"JSONが返されませんでした: {raw[:200]}")
+    except ImportError:
+        raise ValueError(
+            "anthropic ライブラリが見つかりません。\n"
+            "requirements.txt に anthropic を追加してください。"
+        )
+    except ValueError:
+        raise
     except Exception as e:
-        raise ValueError(f"画像解析エラー: {e}")
+        raise ValueError(f"API呼び出しエラー: {type(e).__name__}: {e}")
     return []
 
 
@@ -1112,6 +1132,8 @@ with tab1:
                     st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
                 if st.button("✕", key=f"del_jpc_{i}", disabled=len(pts)==1):
                     del_idx = i
+            # カメラパネルを各行のすぐ下に展開（全幅）
+            camera_ocr_panel("jpc", i)
 
         if del_idx is not None:
             _read_jpc()
@@ -1119,10 +1141,6 @@ with tab1:
             _clear_keys("jpc_")
             st.session_state["pts_jpc"] = new_pts
             st.rerun()
-
-        # カメラパネル（行の外でフル幅展開）
-        for i in range(len(st.session_state["pts_jpc"])):
-            camera_ocr_panel("jpc", i)
 
         # 最新値を読み取り
         pts = _read_jpc()
@@ -1311,6 +1329,8 @@ with tab1:
                     st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
                 if st.button("✕", key=f"del_ll_{i}", disabled=len(pts2)==1):
                     del_idx2 = i
+            # カメラパネルを各行のすぐ下に展開（全幅）
+            camera_ocr_panel("ll", i)
 
         if del_idx2 is not None:
             _read_ll()
@@ -1318,10 +1338,6 @@ with tab1:
             _clear_keys("ll_name_"); _clear_keys("ll_lat_"); _clear_keys("ll_lon_"); _clear_keys("ll_h_")
             st.session_state["pts_ll"] = new_pts2
             st.rerun()
-
-        # カメラパネル（行の外でフル幅展開）
-        for i in range(len(st.session_state["pts_ll"])):
-            camera_ocr_panel("ll", i)
 
         pts2 = _read_ll()
 
@@ -1534,14 +1550,8 @@ with tab1:
                     st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
                 if st.button("✕", key=f"del_cvt_{i}", disabled=len(pts_cvt)==1):
                     del_idx_c = i
-            with c6:
-                if i == 0:
-                    st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
-                camera_ocr_button("cvt", i)
-
-        for i in range(len(pts_cvt)):
+            # カメラパネルを各行のすぐ下に展開（全幅）
             camera_ocr_panel("cvt", i)
-
         if del_idx_c is not None:
             for i, pt in enumerate(st.session_state["pts_cvt"]):
                 for f in ("name","lat","lon","h"):
