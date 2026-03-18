@@ -1465,13 +1465,11 @@ with tab1:
 
                     st.markdown("</div>", unsafe_allow_html=True)
 
-                    h_cvt_raw2 = st.session_state.get(f"cvt_h_{i}", "")
-                    h_cvt_v2 = float(h_cvt_raw2) if h_cvt_raw2.strip() else None
-                    tip_h = f" / h={h_cvt_v2:.4f}m" if h_cvt_v2 is not None else ""
+                    # pt["h"] は現在値同期済みのため直接使用
+                    h_cvt_val = float(pt["h"]) if pt["h"].strip() else None
+                    tip_h = f" / h={h_cvt_val:.4f}m" if h_cvt_val is not None else ""
                     map_rowsc.append({"name":pt["name"],"lat":lat_dd,"lon":lon_dd,
                                       "tooltip":f"{lat_out} / {lon_out}{tip_h}"})
-                    h_cvt = st.session_state.get(f"cvt_h_{i}", "")
-                    h_cvt_val = float(h_cvt) if h_cvt.strip() else None
                     # A=点名, B=緯度, C=経度, D=楕円体高
                     csv_rowsc.append(csv_row(
                         pt["name"],
