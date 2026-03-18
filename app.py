@@ -388,58 +388,96 @@ def camera_ocr_button(mode: str, row_idx: int):
 
 
 def camera_ocr_panel(mode: str, row_idx: int):
-    """列の外（フル幅）にカメラ撮影 + OCR パネルを展開する。"""
+    """
+    📷ボタンの直下にフル幅で展開する写真アップロード＋OCRパネル。
+    ・1点モード: row_idx の行にのみ反映
+    ・複数点モード: 写真に写っている点をすべて読み取り、pts_key 全体を更新
+    """
     open_key = f"cam_open_{mode}_{row_idx}"
-    cam_key  = f"cam_{mode}_{row_idx}"
     if not st.session_state.get(open_key, False):
         return
 
     fields  = ("name","x","y","z") if mode == "jpc" else ("name","lat","lon","h")
     pts_key = {"jpc":"pts_jpc","ll":"pts_ll","cvt":"pts_cvt"}[mode]
-    lbl_fields = "点名・X・Y・Z" if mode == "jpc" else "点名・緯度・経度・楕円体高"
+    prefix  = mode  # "jpc" | "ll" | "cvt"
+    lbl_fields = "点名・X・Y・Z標高" if mode == "jpc" else "点名・緯度・経度・楕円体高"
 
     st.markdown(
         f"<div style='background:#f0f9ff;border:1px solid #bae6fd;"
         f"border-radius:10px;padding:10px 14px;margin:4px 0 8px'>"
-        f"<b>📷 #{row_idx+1} をカメラで読み取る</b>"
-        f"<span style='font-size:11px;color:#64748b;margin-left:8px'>{lbl_fields}</span>"
+        f"<b>📷 写真から読み取る</b>"
+        f"<span style='font-size:11px;color:#64748b;margin-left:8px'>"
+        f"{lbl_fields} を読み取ります。複数点も一括対応。</span>"
         f"</div>",
         unsafe_allow_html=True
     )
-    img = st.camera_input(
-        f"#{row_idx+1} 撮影",
-        key=cam_key,
+
+    uploaded = st.file_uploader(
+        "画像をアップロード（JPG・PNG・HEIC・WebP）",
+        type=["jpg","jpeg","png","heic","webp"],
+        key=f"photo_{mode}_{row_idx}",
         label_visibility="collapsed",
     )
-    if img is not None:
+
+    if uploaded is not None:
+        # MIMEタイプ判定
+        ext = uploaded.name.lower().rsplit(".", 1)[-1]
+        mime_map = {"jpg":"image/jpeg","jpeg":"image/jpeg",
+                    "png":"image/png","webp":"image/webp","heic":"image/jpeg"}
+        mime = mime_map.get(ext, "image/jpeg")
+
         col_img, col_act = st.columns([3, 1])
         with col_img:
-            st.image(img, use_container_width=True)
+            st.image(uploaded, use_container_width=True)
         with col_act:
-            st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
-            if st.button("🔍 読取", key=f"ocr_run_{mode}_{row_idx}",
+            st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+            if st.button("🔍 読み取り実行", key=f"ocr_run_{mode}_{row_idx}",
                          use_container_width=True):
                 with st.spinner("AI解析中..."):
                     try:
-                        pts_data = ocr_image_to_points(img.getvalue(), "image/jpeg", mode)
+                        img_bytes = uploaded.getvalue()
+                        pts_data = ocr_image_to_points(img_bytes, mime, mode)
+
                         if not pts_data:
-                            st.error("読み取れませんでした。数値が写った部分を正面から撮り直してください。")
+                            st.error("読み取れませんでした。数値が写った部分を正面から撮影してください。")
                         else:
-                            p = pts_data[0]
-                            while len(st.session_state[pts_key]) <= row_idx:
-                                st.session_state[pts_key].append(
-                                    {"name":"","x":"","y":"","z":""} if mode=="jpc"
-                                    else {"name":"","lat":"","lon":"","h":""}
-                                )
-                            for f in fields:
-                                val = str(p.get(f, "")).strip()
-                                st.session_state[pts_key][row_idx][f] = val
-                                st.session_state[f"{mode}_{f}_{row_idx}"] = val
+                            # 複数点を読み取った場合は pts_key 全体を更新
+                            # 1点しかなければ row_idx の行だけ更新
+                            template = ({"name":"","x":"","y":"","z":""}
+                                        if mode == "jpc"
+                                        else {"name":"","lat":"","lon":"","h":""})
+
+                            if len(pts_data) > 1:
+                                # 全点更新
+                                new_pts = []
+                                for p in pts_data:
+                                    pt = dict(template)
+                                    for f in fields:
+                                        pt[f] = str(p.get(f, "")).strip()
+                                    new_pts.append(pt)
+                                st.session_state[pts_key] = new_pts
+                                for i, pt in enumerate(new_pts):
+                                    for f in fields:
+                                        st.session_state[f"{prefix}_{f}_{i}"] = pt[f]
+                                n = len(new_pts)
+                            else:
+                                # 1点: row_idx の行だけ更新
+                                p = pts_data[0]
+                                while len(st.session_state[pts_key]) <= row_idx:
+                                    st.session_state[pts_key].append(dict(template))
+                                for f in fields:
+                                    val = str(p.get(f, "")).strip()
+                                    st.session_state[pts_key][row_idx][f] = val
+                                    st.session_state[f"{prefix}_{f}_{row_idx}"] = val
+                                n = 1
+
                             st.session_state[open_key] = False
-                            st.success(f"✅ #{row_idx+1} 読み取り完了")
+                            st.success(f"✅ {n} 点を読み取りました")
                             st.rerun()
+
                     except ValueError as e:
                         st.error(str(e))
+
             if st.button("✕ 閉じる", key=f"cam_close_{mode}_{row_idx}",
                          use_container_width=True):
                 st.session_state[open_key] = False
