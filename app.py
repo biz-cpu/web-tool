@@ -8,6 +8,8 @@ Kawase (2011) 高精度ガウス・クリューゲル投影
 import math
 import io
 import json
+import re
+import time
 import requests
 import streamlit as st
 import pandas as pd
@@ -167,6 +169,7 @@ def _S(phi):
     return _A*_m0*(phi-_c2*math.sin(2*phi)+_c4*math.sin(4*phi)
                       -_c6*math.sin(6*phi)+_c8*math.sin(8*phi))
 
+@st.cache_data(show_spinner=False)
 def latlon_to_jpc(lat_deg, lon_deg, zone):
     if zone not in JPC_ORIGINS: return None
     la0,lo0=JPC_ORIGINS[zone]
@@ -177,6 +180,7 @@ def latlon_to_jpc(lat_deg, lon_deg, zone):
     eta=eta_+sum(_alpha[j]*math.cos(2*j*xi_)*math.sinh(2*j*eta_) for j in range(1,5))
     return _m0*_A*xi-_S(phi0), _m0*_A*eta
 
+@st.cache_data(show_spinner=False)
 def jpc_to_latlon(X, Y, zone):
     if zone not in JPC_ORIGINS: return None
     la0,lo0=JPC_ORIGINS[zone]; phi0=la0*DEG; lam0=lo0*DEG
@@ -192,26 +196,23 @@ def jpc_to_latlon(X, Y, zone):
 # 3. ジオイド高 API
 # ═══════════════════════════════════════════════════════
 
-@st.cache_data(ttl=3600, show_spinner=False)
 @st.cache_data(ttl=86400, show_spinner=False)
 def fetch_geoid(lat: float, lon: float, model: str = "JPGEO2024"):
-    """国土地理院ジオイド高API。失敗時は最大3回リトライ。"""
+    """国土地理院ジオイド高API（24hキャッシュ）。失敗時は最大2回リトライ。"""
     if model == "NONE": return 0.0
     select = "0" if model == "JPGEO2024" else "1"
     url = (
         "https://vldb.gsi.go.jp/sokuchi/surveycalc/geoid/calcgh/cgi/geoidcalc.pl"
         f"?select={select}&tanni=1&outputType=json&latitude={lat:.8f}&longitude={lon:.8f}"
     )
-    import time
-    for attempt in range(4):  # 最大4回試行
+    for attempt in range(3):
         try:
-            r = requests.get(url, timeout=20)
+            r = requests.get(url, timeout=10)
             r.raise_for_status()
-            val = r.json()["OutputData"]["geoidHeight"]
-            return float(val)
+            return float(r.json()["OutputData"]["geoidHeight"])
         except Exception:
-            if attempt < 3:
-                time.sleep(0.8 * (attempt + 1))  # 0.8s, 1.6s, 2.4s と増やす
+            if attempt < 2:
+                time.sleep(0.5)
     return None
 
 # ═══════════════════════════════════════════════════════
@@ -246,7 +247,6 @@ def format_angle(dd, fk):
 # ── 入力パーサー（各フォーマット → 十進度）──
 def parse_angle(val: str, fk: str) -> float:
     """フォーマットキーに応じた文字列を十進角度に変換。失敗時 ValueError。"""
-    import re
     s = val.strip()
     if not s:
         raise ValueError("空欄です")
@@ -302,7 +302,6 @@ def auto_parse_angle(val: str) -> tuple[float, str]:
       4. ddmmssss : DD.MMSSSSSS 構造（小数6桁以上 かつ 分0-59・秒整数0-59）
       5. decimal  : それ以外の純数値
     """
-    import re as _re
     s = val.strip()
     if not s:
         raise ValueError("空欄")
@@ -373,7 +372,6 @@ def render_map(points: list[dict], map_style_key: str, zoom: int = 13):
     if not points:
         return
     import streamlit.components.v1 as components
-    import json as _json
 
     is_aerial = "航空" in map_style_key
     tile_url  = ESRI_TILE if is_aerial else OSM_TILE
@@ -531,9 +529,10 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap');
-
-html, body, [class*="css"] { font-family: 'Noto Sans JP', sans-serif; }
+/* フォント: ローカル優先でシステムフォントにフォールバック（外部読み込み不要） */
+html, body, [class*="css"] {
+  font-family: 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic UI', 'Meiryo', sans-serif;
+}
 
 /* ── サイドバー ── */
 section[data-testid="stSidebar"] {
@@ -1027,8 +1026,7 @@ with tab1:
 
                     N = None; ellH = None; geoid_status = ""
                     if GEOID_KEY != "NONE":
-                        with st.spinner(f"[{pt['name']}] ジオイド高 取得中..."):
-                            N = fetch_geoid(lat_dd, lon_dd, GEOID_KEY)
+                        N = fetch_geoid(lat_dd, lon_dd, GEOID_KEY)
                         if N is not None:
                             geoid_status = f"<span class='geoid-ok'>N={N:.4f} m ({GEOID_KEY})</span>"
                             if Zv is not None: ellH = Zv + N
@@ -1210,8 +1208,7 @@ with tab1:
                     N_ll = None; elev_ll = None; geoid_status_ll = ""
                     if pt["h"].strip():
                         if GEOID_KEY != "NONE":
-                            with st.spinner(f"[{pt['name']}] ジオイド高 取得中..."):
-                                N_ll = fetch_geoid(lv, lov, GEOID_KEY)
+                            N_ll = fetch_geoid(lv, lov, GEOID_KEY)
                             if N_ll is not None:
                                 elev_ll = hv - N_ll
                                 geoid_status_ll = f"<span class='geoid-ok'>N={N_ll:.4f} m</span>"
@@ -1586,6 +1583,10 @@ with tab2:
             # 5列目以降を切り捨て
             df_in = df_in.iloc[:, :4]
 
+            def _v(s):
+                s = str(s).strip()
+                return "" if s.lower() in ("nan","none","") else s
+
             rows_out = []
             pb = st.progress(0, "変換中...")
             total = len(df_in)
@@ -1593,10 +1594,6 @@ with tab2:
             for idx, (_, row) in enumerate(df_in.iterrows()):
                 pb.progress((idx+1)/total, f"{idx+1}/{total} 点処理中")
                 try:
-                    def _v(s):
-                        s = str(s).strip()
-                        return "" if s.lower() in ("nan","none","") else s
-
                     name  = _v(row.iloc[0])
                     col_b = _v(row.iloc[1])
                     col_c = _v(row.iloc[2])
@@ -1623,9 +1620,7 @@ with tab2:
                                 ellH = Zv  # N取得失敗時はZをそのまま楕円体高として使用
                         elif Zv is not None:
                             ellH = Zv
-                        # API連続呼び出しのレート制限を避けるための短い待機
-                        if GEOID_KEY != "NONE" and Zv is not None:
-                            import time as _t; _t.sleep(0.15)
+
                         out_x   = f"{Xv:.4f}"
                         out_y   = f"{Yv:.4f}"
                         out_z   = f"{Zv:.4f}" if Zv is not None else ""
