@@ -1586,7 +1586,10 @@ with tab2:
                         N = None; ellH = None
                         if GEOID_KEY != "NONE" and Zv is not None:
                             N = fetch_geoid(lat_dd, lon_dd, GEOID_KEY)
-                            if N is not None: ellH = Zv + N
+                            if N is not None:
+                                ellH = Zv + N
+                            else:
+                                ellH = Zv  # N取得失敗時はZをそのまま楕円体高として使用
                         elif Zv is not None:
                             ellH = Zv
                         out_x   = f"{Xv:.4f}"
@@ -1595,6 +1598,7 @@ with tab2:
                         out_lat = format_angle(lat_dd, FMT_B2)
                         out_lon = format_angle(lon_dd, FMT_B2)
                         out_h   = f"{ellH:.3f}" if ellH is not None else ""
+                        out_n   = f"{N:.4f}" if N is not None else ""
                         _detected_fmt = ""
 
                     else:
@@ -1620,6 +1624,7 @@ with tab2:
                         out_lat = format_angle(lv, FMT_B2)
                         out_lon = format_angle(lov, FMT_B2)
                         out_h   = f"{hv:.3f}" if hv is not None else ""
+                        out_n   = f"{N_b:.4f}" if ('N_b' in dir() and N_b is not None) else ""
                         _detected_fmt = _fmt_lat
 
                     _fmt_labels = {
@@ -1627,14 +1632,15 @@ with tab2:
                         "ddmmssss":"度分秒圧縮","gons":"Gons","":"—",
                     }
                     rows_out.append({
-                        "点名":        name,
-                        "X(m)":        out_x,
-                        "Y(m)":        out_y,
-                        "Z標高(m)":    out_z,
-                        "緯度":        out_lat,
-                        "経度":        out_lon,
-                        "楕円体高(m)": out_h,
-                        "判別FMT":     _fmt_labels.get(_detected_fmt, _detected_fmt),
+                        "点名":          name,
+                        "X(m)":          out_x,
+                        "Y(m)":          out_y,
+                        "Z標高(m)":      out_z,
+                        "緯度":          out_lat,
+                        "経度":          out_lon,
+                        "楕円体高(m)":   out_h,
+                        "ジオイド高N(m)": out_n,
+                        "判別FMT":       _fmt_labels.get(_detected_fmt, _detected_fmt),
                         "_lat": lat_dd, "_lon": lon_dd, "_err": None,
                     })
                 except Exception as ex:
@@ -1659,7 +1665,7 @@ with tab2:
                 show = ["点名","判別FMT","X(m)","Y(m)","Z標高(m)","緯度","経度","楕円体高(m)"]
                 st.caption("💡 判別FMT = 入力の緯度・経度に自動判別されたフォーマット")
             else:
-                show = ["点名","X(m)","Y(m)","Z標高(m)","緯度","経度","楕円体高(m)"]
+                show = ["点名","X(m)","Y(m)","Z標高(m)","緯度","経度","楕円体高(m)","ジオイド高N(m)"]
             show = [c for c in show if c in ok.columns]
             st.dataframe(ok[show], use_container_width=True, hide_index=True)
 
