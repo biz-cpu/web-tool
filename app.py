@@ -1103,7 +1103,12 @@ with tab1:
                 st.markdown("#### 📍 地図")
                 render_map(map_rows, map_style_lbl, zoom=13)
                 csv_out = "\ufeff" + "\n".join(csv_rows)
-                st.download_button("📥 全点 CSV ダウンロード", csv_out, "jpc_to_ll.csv", "text/csv; charset=utf-8-sig")
+                _fn_jpc = st.text_input("📄 ファイル名", value=st.session_state.get("csv_fn_jpc","jpc_to_ll"),
+                    key="csv_fn_jpc_input", help="拡張子 .csv は自動で付きます",
+                    label_visibility="visible", placeholder="例: 現場名_JPC変換")
+                st.session_state["csv_fn_jpc"] = _fn_jpc or "jpc_to_ll"
+                _fn_jpc_out = (st.session_state["csv_fn_jpc"] or "jpc_to_ll").rstrip(".csv") + ".csv"
+                st.download_button("📥 全点 CSV ダウンロード", csv_out, _fn_jpc_out, "text/csv; charset=utf-8-sig")
         else:
             st.info("X・Y 座標を入力してください。")
 
@@ -1288,7 +1293,12 @@ with tab1:
                 st.markdown("#### 📍 地図")
                 render_map(map_rows2, map_style_lbl, zoom=13)
                 csv_out2 = "\ufeff" + "\n".join(csv_rows2)
-                st.download_button("📥 全点 CSV ダウンロード", csv_out2, "ll_to_jpc.csv", "text/csv; charset=utf-8-sig")
+                _fn_ll = st.text_input("📄 ファイル名", value=st.session_state.get("csv_fn_ll","ll_to_jpc"),
+                    key="csv_fn_ll_input", help="拡張子 .csv は自動で付きます",
+                    label_visibility="visible", placeholder="例: 現場名_LL変換")
+                st.session_state["csv_fn_ll"] = _fn_ll or "ll_to_jpc"
+                _fn_ll_out = (st.session_state["csv_fn_ll"] or "ll_to_jpc").rstrip(".csv") + ".csv"
+                st.download_button("📥 全点 CSV ダウンロード", csv_out2, _fn_ll_out, "text/csv; charset=utf-8-sig")
         else:
             st.info(f"緯度・経度を {in_fmt_lbl} 形式で入力してください。")
 
@@ -1490,7 +1500,12 @@ with tab1:
                 st.markdown("#### 📍 地図")
                 render_map(map_rowsc, map_style_lbl, zoom=13)
                 csv_outc = "\ufeff" + "\n".join(csv_rowsc)
-                st.download_button("📥 全点 CSV ダウンロード", csv_outc, "ll_format.csv", "text/csv; charset=utf-8-sig")
+                _fn_cvt = st.text_input("📄 ファイル名", value=st.session_state.get("csv_fn_cvt","ll_format"),
+                    key="csv_fn_cvt_input", help="拡張子 .csv は自動で付きます",
+                    label_visibility="visible", placeholder="例: 現場名_形式変換")
+                st.session_state["csv_fn_cvt"] = _fn_cvt or "ll_format"
+                _fn_cvt_out = (st.session_state["csv_fn_cvt"] or "ll_format").rstrip(".csv") + ".csv"
+                st.download_button("📥 全点 CSV ダウンロード", csv_outc, _fn_cvt_out, "text/csv; charset=utf-8-sig")
         else:
             st.info(f"緯度・経度を {in_fmt_cvt_lbl} 形式で入力してください。")
 
@@ -1723,10 +1738,15 @@ with tab2:
                 ])
                 for _, r in ok.iterrows()
             ]
+            _fn_batch = st.text_input("📄 ファイル名", value=st.session_state.get("csv_fn_batch","batch_result"),
+                key="csv_fn_batch_input", help="拡張子 .csv は自動で付きます",
+                label_visibility="visible", placeholder="例: 現場名_一括変換")
+            st.session_state["csv_fn_batch"] = _fn_batch or "batch_result"
+            _fn_batch_out = (st.session_state["csv_fn_batch"] or "batch_result").rstrip(".csv") + ".csv"
             st.download_button(
                 f"📥 結果 CSV ダウンロード（{out_fmt_b2_lbl}）",
                 "\ufeff" + "\n".join(csv_lines),
-                "batch_result.csv", "text/csv; charset=utf-8-sig"
+                _fn_batch_out, "text/csv; charset=utf-8-sig"
             )
 
         except Exception as ex:
@@ -1876,15 +1896,24 @@ with tab4:
 """)
 
     # ── 5. 他社機ローカライゼーションデータ変換 ──
-    with st.expander("🔄 5. 他社機ローカライゼーションデータ変換（3DOffice対応）", expanded=False):
+    with st.expander("🔄 5. 他社機ローカライゼーションデータ変換（建設ICT対応）", expanded=False):
         st.markdown("""
+<div style='background:#fef3c7;border:2px solid #f59e0b;border-radius:10px;padding:12px 16px;margin-bottom:16px'>
+<div style='font-size:13px;font-weight:700;color:#92400e;margin-bottom:6px'>📐 基準点配置の重要ポイント</div>
+<div style='font-size:12px;color:#78350f;line-height:1.9'>
+基準点は<b>施工エリア全体を囲むように配置</b>することで、ローカライゼーションの精度が向上します。<br>
+小規模範囲でも <b>最低 4 点</b>・推奨 <b>5 点以上</b> を用意してください。<br>
+エリア内部に点が偏ると外挿誤差が大きくなります。
+</div>
+</div>
+
 ### 🎯 ユースケース
 
-**SC ローバー等以外の GNSS ローバーで取得した座標（緯度・経度・楕円体高）を
-EarthBrain の 3DMG 等でローカライゼーションとして活用したい場合**に使用します。
+**対応 GNSS ローバーで取得した座標（緯度・経度・楕円体高）を
+建設 ICT ソフトウェアのローカライゼーションとして活用したい場合**に使用します。
 
-> 例：Leica / Trimble 等のローバーで観測した基準点データを
-> 3D マシンガイダンス（3DMG）のローカライゼーションファイルに変換する
+> 例：各社 GNSS ローバーで観測した基準点データを
+> 3D マシンガイダンス（3DMG）・建設 ICT ソフトウェアのローカライゼーションファイルに変換する
 
 ---
 
@@ -1895,7 +1924,7 @@ EarthBrain の 3DMG 等でローカライゼーションとして活用したい
 | 項目 | 設定値 |
 |---|---|
 | 座標系 | 現場の系番号（例：9系 ー 関東） |
-| 測地系 | GNSSローバーが使用している測地系（通常 JGD2011 または JGD2024） |
+| 測地系 | GNSS ローバーが使用している測地系（通常 JGD2011 または JGD2024） |
 | ジオイドモデル | JPGEO2024（推奨）|
 
 ---
@@ -1922,7 +1951,7 @@ EarthBrain の 3DMG 等でローカライゼーションとして活用したい
 **STEP 4｜点名・緯度・経度・楕円体高を入力する**
 
 - 点名に分かりやすい名称を入力（例：BM-1、TP1 など）
-- ローバーで取得した **緯度・経度・楕円体高（h）** を入力
+- GNSS ローバーで取得した **緯度・経度・楕円体高（h）** を入力
 - **「＋ 点を追加」** ボタンで複数の基準点を追加入力
 
 ---
@@ -1933,15 +1962,16 @@ EarthBrain の 3DMG 等でローカライゼーションとして活用したい
 
 > **DD.MMSSSSSS（度分秒圧縮）** を選択
 
-3DOffice は度分秒圧縮形式（DD.MMSSSSSS）での入力が必要です。
+建設 ICT ソフトウェア（3DOffice 等）は度分秒圧縮形式（DD.MMSSSSSS）での入力が必要です。
 
 ---
 
-**STEP 6｜変換結果を確認・利用する**
+**STEP 6｜変換結果を確認・CSV出力する**
 
-変換結果に表示される以下の値を 3DOffice のローカライゼーション設定に入力します：
+変換結果に表示される以下の値をローカライゼーション設定に入力します。
+「📥 全点 CSV ダウンロード」からファイル名を指定して出力できます。
 
-| 出力値 | 3DOffice での使用箇所 |
+| 出力値 | 建設 ICT ソフトウェアでの使用箇所 |
 |---|---|
 | X（m） | 北方向座標 |
 | Y（m） | 東方向座標 |
@@ -1949,13 +1979,7 @@ EarthBrain の 3DMG 等でローカライゼーションとして活用したい
 | 緯度（DD.MMSSSSSS） | 緯度 |
 | 経度（DD.MMSSSSSS） | 経度 |
 | 楕円体高（m） | 楕円体高 |
-
----
-
-> 💡 **ポイント**
-> 測定する基準点が施工エリアを囲むように配置することで、ローカライゼーションの精度が向上します。
-> 小規模範囲であれば最低 4 点（推奨 5 点以上）の基準点データを用意してください。
-""")
+""", unsafe_allow_html=True)
 
     # ── 6. 変換精度 ──
     with st.expander("🎯 6. 変換精度・仕様"):
