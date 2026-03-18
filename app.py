@@ -1438,8 +1438,8 @@ with tab1:
                         f"{pt['name']}</div>",
                         unsafe_allow_html=True)
 
-                    h_cvt_raw = st.session_state.get(f"cvt_h_{i}", "")
-                    h_cvt_v = float(h_cvt_raw) if h_cvt_raw.strip() else None
+                    # pt["h"] は現在値同期済み → session_state再取得不要
+                    h_cvt_val = float(pt["h"]) if pt["h"].strip() else None
 
                     rc1,rc2,rc3 = st.columns(3)
                     with rc1:
@@ -1455,8 +1455,8 @@ with tab1:
                             f"<div class='rc-sub'>{fmt_decimal(lon_dd)} deg</div></div>",
                             unsafe_allow_html=True)
                     with rc3:
-                        hc_str = f"{h_cvt_v:.4f} m" if h_cvt_v is not None else "---"
-                        hc_sub = "楕円体高（そのまま）" if h_cvt_v is not None else "未入力"
+                        hc_str = f"{h_cvt_val:.4f} m" if h_cvt_val is not None else "---"
+                        hc_sub = "楕円体高（そのまま）" if h_cvt_val is not None else "未入力"
                         st.markdown(
                             f"<div class='rc'><div class='rc-lbl' style='color:#8b5cf6'>楕円体高 h (m)</div>"
                             f"<div class='rc-val'>{hc_str}</div>"
@@ -1464,9 +1464,6 @@ with tab1:
                             unsafe_allow_html=True)
 
                     st.markdown("</div>", unsafe_allow_html=True)
-
-                    # pt["h"] は現在値同期済みのため直接使用
-                    h_cvt_val = float(pt["h"]) if pt["h"].strip() else None
                     tip_h = f" / h={h_cvt_val:.4f}m" if h_cvt_val is not None else ""
                     map_rowsc.append({"name":pt["name"],"lat":lat_dd,"lon":lon_dd,
                                       "tooltip":f"{lat_out} / {lon_out}{tip_h}"})
