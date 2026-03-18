@@ -576,29 +576,34 @@ section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] span { col
 /* pydeck地図の高さ統一 */
 .element-container iframe { border-radius:12px; }
 
-/* ── スマホ用 サイドバートグルボタン（スクロール追従）── */
+/* ── スマホ用 サイドバートグルボタン（キーボード追従・top固定）── */
 #sb-toggle-btn {
-  display: none;               /* デフォルト非表示（PC） */
+  display: none;
   position: fixed;
-  bottom: 20px;
-  left: 16px;
-  z-index: 99999;
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
+  /* top固定: キーボード表示でも上部は動かないため安定 */
+  top: calc(8px + env(safe-area-inset-top, 0px));
+  left: 12px;
+  z-index: 999999;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
   background: #0f172a;
   color: #f1f5f9;
-  border: 2px solid #334155;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-  font-size: 22px;
+  border: 1.5px solid #475569;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+  font-size: 20px;
   line-height: 1;
   cursor: pointer;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s, transform 0.15s;
+  transition: background 0.2s, transform 0.15s, top 0.1s;
   -webkit-tap-highlight-color: transparent;
+  /* iOS Safariでfixedをiframe外に出すための補助 */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  will-change: transform;
 }
-#sb-toggle-btn:active { transform: scale(0.92); background: #1e3a5f; }
+#sb-toggle-btn:active { transform: scale(0.91) translateZ(0); background: #1e3a5f; }
 
 /* スマホ幅（768px以下）でのみ表示 */
 @media (max-width: 768px) {
@@ -612,56 +617,112 @@ section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] span { col
 # 画面右下に固定表示するフローティングボタンを注入する
 import streamlit.components.v1 as _stc
 _stc.html("""
-<div id="sb-toggle-btn" onclick="toggleSidebar()" title="メニュー">☰</div>
+<style>
+  #sb-float-btn {
+    display: none;
+    position: fixed;
+    top: 8px;
+    left: 12px;
+    z-index: 999999;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: #0f172a;
+    color: #f1f5f9;
+    border: 1.5px solid #475569;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+    font-size: 20px;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    will-change: transform;
+    transition: background 0.2s;
+  }
+  @media (max-width: 768px) {
+    #sb-float-btn { display: flex; }
+  }
+</style>
+<div id="sb-float-btn" title="メニュー">☰</div>
 <script>
 (function() {
-  // Streamlit の本体トグルボタンを探して非表示にする
-  function hideSidebarNativeBtn() {
-    var btns = window.parent.document.querySelectorAll(
-      '[data-testid="collapsedControl"], [data-testid="stSidebarCollapsedControl"]'
-    );
-    btns.forEach(function(b){ b.style.opacity = '0'; b.style.pointerEvents = 'none'; });
-  }
+  var btn = document.getElementById('sb-float-btn');
 
-  // サイドバーの開閉状態を判定して切り替える
-  window.toggleSidebar = function() {
+  // ── ネイティブのStreamlitサイドバーボタンを操作 ──
+  function getNativeBtn() {
     var doc = window.parent.document;
-    var sidebar = doc.querySelector('[data-testid="stSidebar"]');
-    if (!sidebar) return;
-
-    // 現在の状態を確認（collapsed クラスや style で判定）
-    var isCollapsed = sidebar.getAttribute('aria-expanded') === 'false'
-                   || sidebar.classList.contains('st-emotion-cache-collapsed')
-                   || getComputedStyle(sidebar).transform.includes('-');
-
-    // Streamlit のネイティブトグルボタンをクリックして開閉
-    var nativeBtn = doc.querySelector(
+    return doc.querySelector(
       '[data-testid="collapsedControl"] button, '
       + '[data-testid="stSidebarCollapsedControl"] button, '
-      + 'button[kind="header"]'
+      + '[data-testid="stSidebarToggle"] button'
     );
-    if (!nativeBtn) {
-      // フォールバック: sidebar の最初の button を探す
-      nativeBtn = doc.querySelector('[data-testid="stSidebar"] button');
-    }
-    if (nativeBtn) nativeBtn.click();
+  }
 
-    // アイコンを切り替える
-    var btn = document.getElementById('sb-toggle-btn');
-    if (btn) {
-      setTimeout(function(){
-        var sb2 = doc.querySelector('[data-testid="stSidebar"]');
-        // sidebar が幅を持っていれば開いている
-        var isOpen = sb2 && sb2.getBoundingClientRect().width > 50;
-        btn.textContent = isOpen ? '✕' : '☰';
-      }, 300);
-    }
-  };
+  function hideSidebarNativeBtn() {
+    var doc = window.parent.document;
+    var btns = doc.querySelectorAll(
+      '[data-testid="collapsedControl"], '
+      + '[data-testid="stSidebarCollapsedControl"]'
+    );
+    btns.forEach(function(b) {
+      b.style.cssText += 'opacity:0!important;pointer-events:none!important;';
+    });
+  }
 
-  // ページ読み込み後にネイティブボタンを隠す（スマホのみ）
-  setTimeout(function(){
+  function isSidebarOpen() {
+    var doc = window.parent.document;
+    var sb = doc.querySelector('[data-testid="stSidebar"]');
+    if (!sb) return false;
+    var w = sb.getBoundingClientRect().width;
+    return w > 60;
+  }
+
+  function updateIcon() {
+    if (btn) btn.textContent = isSidebarOpen() ? '✕' : '☰';
+  }
+
+  btn.addEventListener('click', function(e) {
+    e.preventDefault();
+    var nb = getNativeBtn();
+    if (nb) { nb.click(); }
+    setTimeout(updateIcon, 350);
+  });
+
+  // ── iOS キーボード表示時の top 位置補正 ──
+  // visualViewport API: キーボード表示でビューポートのoffsetTopが変化する
+  function adjustBtnPosition() {
+    if (!window.visualViewport) return;
+    var vv = window.visualViewport;
+    // visualViewport.offsetTop = スクロール位置からキーボードぶんずれた量
+    // ボタンをそのオフセット分だけ下にずらすことで「画面の見えている部分の上端」に追従
+    var topOffset = Math.round(vv.offsetTop + 8);
+    btn.style.top = topOffset + 'px';
+  }
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', adjustBtnPosition);
+    window.visualViewport.addEventListener('scroll', adjustBtnPosition);
+  }
+
+  // フォールバック: window の resize / scroll でも補正
+  window.addEventListener('resize', adjustBtnPosition);
+
+  // 初期化
+  setTimeout(function() {
     if (window.innerWidth <= 768) hideSidebarNativeBtn();
-  }, 1000);
+    updateIcon();
+    adjustBtnPosition();
+  }, 800);
+
+  // MutationObserver でサイドバー開閉をウォッチしてアイコン更新
+  var doc = window.parent.document;
+  var target = doc.querySelector('[data-testid="stSidebar"]');
+  if (target && window.MutationObserver) {
+    var mo = new MutationObserver(function() { updateIcon(); });
+    mo.observe(target, { attributes: true, childList: false, subtree: false });
+  }
 })();
 </script>
 """, height=0, scrolling=False)
