@@ -281,6 +281,143 @@ def parse_angle(val: str, fk: str) -> float:
 
     return float(s)
 
+# ─────────────────────────────────────────────────────────
+# 写真OCR：Claude Vision API で座標値を読み取る
+# ─────────────────────────────────────────────────────────
+
+def ocr_image_to_points(image_bytes: bytes, mime_type: str, mode: str) -> list[dict]:
+    """
+    写真から座標データを読み取る。
+    mode: "jpc" | "ll" | "cvt"
+    返値: 点リスト [{"name":..,"x":..,"y":..,"z":..}, ...]  または
+          [{"name":..,"lat":..,"lon":..,"h":..}, ...]
+    """
+    import base64, json, requests as _req
+
+    b64 = base64.standard_b64encode(image_bytes).decode()
+
+    if mode == "jpc":
+        field_desc = "点名(name), X座標(x), Y座標(y), Z標高(z)"
+        json_schema = '{"points":[{"name":"","x":"","y":"","z":""}]}'
+        hint = "平面直角座標（X北が正・Y東が正・Z標高、単位m）"
+    elif mode == "ll":
+        field_desc = "点名(name), 緯度(lat), 経度(lon), 楕円体高(h)"
+        json_schema = '{"points":[{"name":"","lat":"","lon":"","h":""}]}'
+        hint = "緯度・経度・楕円体高（h）"
+    else:  # cvt
+        field_desc = "点名(name), 緯度(lat), 経度(lon), 楕円体高(h)"
+        json_schema = '{"points":[{"name":"","lat":"","lon":"","h":""}]}'
+        hint = "緯度・経度・楕円体高（h）"
+
+    prompt = f"""この画像から測量・GNSSデータの数値を読み取ってください。
+読み取り対象: {hint}
+各点の {field_desc} を抽出してください。
+
+- 数値は画像に表示されている通りに読み取る（単位は不要、数値のみ）
+- 点名が不明な場合は "pt1", "pt2"... と連番
+- 空欄・不明な値は "" (空文字)
+- 複数点ある場合はすべて抽出
+
+以下のJSONフォーマットのみで回答してください（前後の説明不要）:
+{json_schema}
+"""
+
+    try:
+        resp = _req.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={"Content-Type": "application/json"},
+            json={
+                "model": "claude-sonnet-4-6",
+                "max_tokens": 1000,
+                "messages": [{
+                    "role": "user",
+                    "content": [
+                        {"type": "image", "source": {
+                            "type": "base64",
+                            "media_type": mime_type,
+                            "data": b64,
+                        }},
+                        {"type": "text", "text": prompt},
+                    ]
+                }]
+            },
+            timeout=30
+        )
+        resp.raise_for_status()
+        raw = resp.json()["content"][0]["text"].strip()
+        # JSON部分を抽出
+        import re as _re
+        m = _re.search(r'\{.*\}', raw, _re.DOTALL)
+        if m:
+            data = json.loads(m.group())
+            return data.get("points", [])
+    except Exception as e:
+        raise ValueError(f"画像解析エラー: {e}")
+    return []
+
+
+def render_photo_import(mode: str, key_suffix: str):
+    """
+    写真取り込みUI: アップロード → OCR → session_stateに反映
+    mode: "jpc" | "ll" | "cvt"
+    """
+    with st.expander("📷 写真から読み取る", expanded=False):
+        st.caption("測量機器の画面・帳票・手書きメモなどを撮影してアップロードしてください")
+        uploaded = st.file_uploader(
+            "画像をアップロード",
+            type=["jpg","jpeg","png","heic","webp"],
+            key=f"photo_{key_suffix}",
+            label_visibility="collapsed",
+        )
+        if uploaded is not None:
+            col_img, col_btn = st.columns([3,1])
+            with col_img:
+                st.image(uploaded, use_container_width=True)
+            with col_btn:
+                if st.button("🔍 読み取り実行", key=f"ocr_{key_suffix}"):
+                    with st.spinner("画像を解析中..."):
+                        try:
+                            img_bytes = uploaded.read()
+                            mime = "image/jpeg"
+                            if uploaded.name.lower().endswith(".png"):
+                                mime = "image/png"
+                            elif uploaded.name.lower().endswith(".webp"):
+                                mime = "image/webp"
+
+                            points = ocr_image_to_points(img_bytes, mime, mode)
+
+                            if not points:
+                                st.error("データを読み取れませんでした")
+                            else:
+                                # session_state に反映
+                                if mode == "jpc":
+                                    key = "pts_jpc"
+                                    template = {"name":"","x":"","y":"","z":""}
+                                    fields = ("name","x","y","z")
+                                else:
+                                    key = "pts_ll" if mode == "ll" else "pts_cvt"
+                                    template = {"name":"","lat":"","lon":"","h":""}
+                                    fields = ("name","lat","lon","h")
+
+                                new_pts = []
+                                for p in points:
+                                    pt = dict(template)
+                                    for f in fields:
+                                        pt[f] = str(p.get(f, "")).strip()
+                                    new_pts.append(pt)
+
+                                if new_pts:
+                                    st.session_state[key] = new_pts
+                                    # ウィジェットキーも更新
+                                    for i, pt in enumerate(new_pts):
+                                        for f in fields:
+                                            st.session_state[f"{key.replace('pts_','')[:3]}_{f}_{i}"] = pt[f]
+                                    st.success(f"✅ {len(new_pts)} 点を読み取りました")
+                                    st.rerun()
+                        except ValueError as e:
+                            st.error(str(e))
+
+
 def auto_parse_angle(val: str) -> tuple[float, str]:
     """
     5フォーマットを自動判別して (十進角度, フォーマットキー) を返す。
@@ -932,6 +1069,7 @@ with tab1:
                 _swap_jpc()
                 st.rerun()
 
+        render_photo_import("jpc", "jpc")
         st.markdown("<div class='sec-label'>入力（平面直角座標）</div>", unsafe_allow_html=True)
 
         pts = st.session_state["pts_jpc"]
@@ -1121,6 +1259,7 @@ with tab1:
                 _swap_ll()
                 st.rerun()
 
+        render_photo_import("ll", "ll")
         st.markdown(f"<div class='sec-label'>入力（{in_fmt_lbl}）</div>", unsafe_allow_html=True)
 
         pts2 = st.session_state["pts_ll"]
@@ -1336,6 +1475,7 @@ with tab1:
                     pt["lat"], pt["lon"] = old_lon, old_lat
                 st.rerun()
 
+        render_photo_import("cvt", "cvt")
         st.markdown(f"<div class='sec-label'>入力（{in_fmt_cvt_lbl}）</div>", unsafe_allow_html=True)
 
         pts_cvt = st.session_state["pts_cvt"]
