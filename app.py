@@ -681,6 +681,60 @@ st.markdown("""
   } else {
     tryInit(10);
   }
+  // ── サイドバー selectbox の input に readonly を付与 ──
+  // iOS ではキーボードが出ないよう readOnly + inputmode=none で完全封鎖
+  // ── サイドバー内 selectbox のキーボード封鎖 ──────────────────
+  // 対象: サイドバー内の全 selectbox（座標系・測地系・ジオイドモデル・地図スタイル）
+  // 手法: readonly + inputmode=none + focus即blur の3段階
+
+  // 既にリスナー登録済みの input を追跡
+  var _locked = new WeakSet();
+
+  function lockAllSidebarSelects() {
+    // stSidebar が閉じていても popover/portal 経由で描画される場合があるため
+    // ① sidebar 直下 ② data-testid="stSidebarContent" の両方を検索
+    var roots = [
+      document.querySelector('[data-testid="stSidebar"]'),
+      document.querySelector('[data-testid="stSidebarContent"]'),
+      document.querySelector('[data-testid="stSidebarUserContent"]'),
+    ];
+    var found = false;
+    roots.forEach(function(root) {
+      if (!root) return;
+      root.querySelectorAll('.stSelectbox input, [data-baseweb="select"] input').forEach(function(inp) {
+        if (_locked.has(inp)) { found = true; return; }
+        inp.setAttribute('readonly', 'readonly');
+        inp.setAttribute('inputmode', 'none');
+        inp.style.caretColor = 'transparent';
+        inp.style.userSelect = 'none';
+        inp.style.webkitUserSelect = 'none';
+        inp.style.cursor = 'pointer';
+        inp.addEventListener('focus', function(e) {
+          setTimeout(function(){ e.target.blur(); }, 0);
+        }, true);
+        _locked.add(inp);
+        found = true;
+      });
+    });
+    return found;
+  }
+
+  function watchSidebarSelects() {
+    // sidebar 全体を監視して動的追加された input にも適用
+    var root = document.querySelector('[data-testid="stSidebar"]') || document.body;
+    lockAllSidebarSelects();
+    if (window.MutationObserver) {
+      var mo = new MutationObserver(function() { lockAllSidebarSelects(); });
+      mo.observe(root, { childList: true, subtree: true });
+    }
+  }
+
+  function tryLock(n) {
+    if (lockAllSidebarSelects()) { watchSidebarSelects(); return; }
+    if (n > 0) setTimeout(function(){ tryLock(n-1); }, 400);
+  }
+  tryLock(20);
+
 })();
 </script>
 """, unsafe_allow_html=True)
