@@ -577,30 +577,12 @@ section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] span { col
 .element-container iframe { border-radius:12px; }
 
 /* ══════════════════════════════════════════════════════
-   スマホ対応 CSS
+   スマホ対応 CSS（ボタン行は縦並びのまま・サイドバーボタンのみ対応）
    ══════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
 
-  /* ── ボタン行を横並びに強制（＋追加・全クリア・入替を1行に）── */
-  /* Streamlit の columns ラッパーに flex を強制 */
-  [data-testid="stHorizontalBlock"] {
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    gap: 6px !important;
-  }
-  [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
-    min-width: 0 !important;
-    flex: 1 1 auto !important;
-  }
-  /* ボタンを小さく・折り返しなし */
-  [data-testid="stHorizontalBlock"] button {
-    font-size: 11px !important;
-    padding: 4px 6px !important;
-    white-space: nowrap !important;
-    min-height: 32px !important;
-  }
-
-  /* ── Streamlit ネイティブのサイドバー折りたたみボタンを大きく・常時表示 ── */
+  /* ── Streamlit ネイティブのサイドバー折りたたみボタン ──
+     スマホ時に常時表示・左上固定・デザイン統一             */
   [data-testid="collapsedControl"],
   [data-testid="stSidebarCollapsedControl"] {
     position: fixed !important;
@@ -618,6 +600,10 @@ section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] span { col
     justify-content: center !important;
     opacity: 1 !important;
     pointer-events: auto !important;
+    /* iOS: GPU レイヤーに昇格して fixed をキープ */
+    -webkit-transform: translateZ(0) !important;
+    transform: translateZ(0) !important;
+    will-change: transform !important;
   }
   [data-testid="collapsedControl"] button,
   [data-testid="stSidebarCollapsedControl"] button {
@@ -635,20 +621,69 @@ section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] span { col
     width: 22px !important;
     height: 22px !important;
   }
-
-  /* キーボード表示時も fixed が追従するよう iOS 向け補強 */
-  [data-testid="collapsedControl"],
-  [data-testid="stSidebarCollapsedControl"] {
-    -webkit-transform: translateZ(0) !important;
-    transform: translateZ(0) !important;
-    will-change: transform !important;
-  }
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ── スマホ用サイドバーボタンはCSS側で対応（上記 @media (max-width:768px) 参照）
-# iframe経由のfloatingボタンはiOS Chromeで親ページに効かないため廃止
+# ── ② iOS キーボード表示時の fixed 位置ずれ補正 ──────────────────
+# st.markdown の HTML は Streamlit メインページ DOM に直接注入される。
+# visualViewport API でキーボード表示を検知し、
+# collapsedControl ボタンの top を動的に補正する。
+st.markdown("""
+<script>
+(function(){
+  if (typeof window === 'undefined') return;
+
+  var SELECTORS = [
+    '[data-testid="collapsedControl"]',
+    '[data-testid="stSidebarCollapsedControl"]'
+  ];
+
+  function getBtn() {
+    for (var i = 0; i < SELECTORS.length; i++) {
+      var el = document.querySelector(SELECTORS[i]);
+      if (el) return el;
+    }
+    return null;
+  }
+
+  function adjust() {
+    var btn = getBtn();
+    if (!btn) return;
+    if (window.innerWidth > 768) { btn.style.top = ''; return; }
+
+    if (window.visualViewport) {
+      // visualViewport.offsetTop = キーボードなどでずれた上端の量
+      var offset = Math.round(window.visualViewport.offsetTop);
+      btn.style.top = (offset + 8) + 'px';
+    } else {
+      btn.style.top = '8px';
+    }
+  }
+
+  // visualViewport イベント（iOS15+ / Chrome Mobile）
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', adjust);
+    window.visualViewport.addEventListener('scroll', adjust);
+  }
+
+  // フォールバック
+  window.addEventListener('resize', adjust);
+
+  // DOM 構築完了後に初回実行（Streamlit は動的レンダリングのため少し待つ）
+  function tryInit(n) {
+    var btn = getBtn();
+    if (btn) { adjust(); return; }
+    if (n > 0) setTimeout(function(){ tryInit(n-1); }, 400);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function(){ tryInit(10); });
+  } else {
+    tryInit(10);
+  }
+})();
+</script>
+""", unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════════════════
 # 7. サイドバー共通設定
