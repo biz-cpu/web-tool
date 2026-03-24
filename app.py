@@ -340,7 +340,7 @@ def auto_parse_angle(val: str) -> tuple[float, str]:
         raise ValueError("空欄")
 
     # 1. bearing: 先頭 N or S
-    if _re.match(r"^[NSns]", s):
+    if re.match(r"^[NSns]", s):
         return parse_angle(s, "bearing"), "bearing"
 
     # 2. dms: Unicode度分秒記号（° ′ ″）を含む ← 半角英字 d/m/s は除外して誤判定防止
@@ -348,14 +348,14 @@ def auto_parse_angle(val: str) -> tuple[float, str]:
         return parse_angle(s, "dms"), "dms"
 
     # 3. gons: 末尾に gon/gons/g/gr（純数値以外）
-    if _re.search(r"(?i)(gons?|gr?)\s*$", s):
+    if re.search(r"(?i)(gons?|gr?)\s*$", s):
         return parse_angle(s, "gons"), "gons"
 
     # 4. ddmmssss: DD.MMSSSSSS（小数12桁以上 かつ 分0-59・秒0-59）
     # 十進角度との誤判定を防ぐため、小数部12桁以上を必須条件とする
     # 例: 35.404052440000 (14桁) → ddmmssss確定
     #     140.55591438   (8桁)  → decimal（十進角度として扱う）
-    m = _re.match(r"^(-?)(\d{1,3})\.(\d{12,})$", s)
+    m = re.match(r"^(-?)(\d{1,3})\.(\d{12,})$", s)
     if m:
         deg_int = int(m.group(2))
         dec_str = m.group(3).ljust(14, "0")
