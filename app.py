@@ -666,6 +666,12 @@ section[data-testid="stSidebar"] { display: none !important; }
 # ═══════════════════════════════════════════════════════
 
 # 設定をメインエリアに横並びで配置
+st.markdown("""
+<div class="app-hdr">
+  <h1>🛰️ GNSS SmartShift ICT</h1>
+  <p style='font-size:13px;color:#cbd5e1;margin:2px 0 0;font-weight:500;letter-spacing:.05em'>マルチメーカー対応 ローカライゼーション統合システム</p>
+</div>""", unsafe_allow_html=True)
+
 zone_inv = {v:k for k,v in JPC_ZONE_LABELS.items()}
 datum_inv = {v["label"]:k for k,v in DATUMS.items()}
 
@@ -700,12 +706,6 @@ with st.expander("⚙️ 共通設定", expanded=True):
 # FMT/fmt_lbl はTAB内の各モードで個別に定義するため、ここではデフォルトのみ設定
 _FMT_DEFAULT = "decimal"
 _fmt_lbl_default = list(OUTPUT_FORMATS.keys())[0]
-
-st.markdown("""
-<div class="app-hdr">
-  <h1>🛰️ GNSS SmartShift ICT</h1>
-  <p style='font-size:13px;color:#cbd5e1;margin:2px 0 0;font-weight:500;letter-spacing:.05em'>マルチメーカー対応 ローカライゼーション統合システム</p>
-</div>""", unsafe_allow_html=True)
 
 # ── グローバルチェック（サイドバー設定の不整合を常時表示）──────
 _datum_warn = check_datum_zone_mismatch(DATUM, Z)
@@ -1933,9 +1933,11 @@ A. 変換結果の下に表示される **「📄 ファイル名」** 入力欄
 """)
 
     st.markdown("---")
-    # ── 免責事項・プライバシーポリシー ──
-    with st.expander("📋 免責事項・プライバシーポリシー"):
-        st.markdown("""
+
+# ── ページ最下部：免責事項・プライバシーポリシー ──
+st.markdown("---")
+with st.expander("📋 免責事項・プライバシーポリシー"):
+    st.markdown("""
 本ツール（GNSS SmartShift ICT）による座標変換・ジオイド高計算・各種出力値はすべて参考値です。
 変換結果を実際の測量・設計・施工・出来形管理等に使用する場合は、必ず有資格者（測量士・測量士補等）による検証・確認を行ってください。
 計算結果の利用によって生じた損害・損失・不利益について、開発者は一切の責任を負いません。
@@ -1946,7 +1948,7 @@ A. 変換結果の下に表示される **「📄 ファイル名」** 入力欄
 
 © 2026 biz-cpu　｜　本ソフトウェアの無断複製・改変・再配布・商用転用を禁じます。
 """)
-    st.caption("© 2026 biz-cpu　｜　GNSS SmartShift ICT　｜　Kawase (2011) 高次ガウス・クリューゲル展開式")
+st.caption("© 2026 biz-cpu　｜　GNSS SmartShift ICT　｜　Kawase (2011) 高次ガウス・クリューゲル展開式")
 
 # ── ページトップへ戻るボタン（parent.document に直接注入）──
 import streamlit.components.v1 as _comp_top
