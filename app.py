@@ -651,25 +651,26 @@ section[data-testid="stSidebar"] { display: none !important; }
 [data-testid="collapsedControl"],
 [data-testid="stSidebarCollapsedControl"] { display: none !important; }
 
-/* ── タブ：大きく・見やすく ── */
+/* ── タブ：見やすく・レスポンシブ対応 ── */
 div[data-testid="stTabs"] > div:first-child {
-  gap: 10px;
+  gap: 8px;
   border-bottom: 2px solid #e2e8f0;
-  padding-bottom: 0;
   margin-bottom: 18px;
+  flex-wrap: nowrap;
 }
 div[data-testid="stTabs"] button[role="tab"] {
   font-size: 15px !important;
-  font-weight: 600 !important;
-  padding: 10px 28px !important;
+  font-weight: 700 !important;
+  padding: 10px 24px !important;
   border-radius: 10px 10px 0 0 !important;
   border: 1.5px solid #e2e8f0 !important;
   border-bottom: none !important;
   background: #f8fafc !important;
   color: #64748b !important;
-  letter-spacing: .02em;
+  white-space: nowrap;
+  flex: 1 1 0;
+  min-width: 0;
   transition: background .15s, color .15s;
-  min-width: 180px;
 }
 div[data-testid="stTabs"] button[role="tab"]:hover {
   background: #e0f2fe !important;
@@ -683,7 +684,21 @@ div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
 }
 div[data-testid="stTabs"] button[role="tab"] p {
   font-size: 15px !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
+  margin: 0 !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* モバイル */
+@media (max-width: 640px) {
+  div[data-testid="stTabs"] button[role="tab"] {
+    font-size: 13px !important;
+    padding: 8px 10px !important;
+  }
+  div[data-testid="stTabs"] button[role="tab"] p {
+    font-size: 13px !important;
+  }
 }
 
 </style>
@@ -889,7 +904,7 @@ _datum_warn = check_datum_zone_mismatch(DATUM, Z)
 if _datum_warn:
     st.warning(_datum_warn)
 
-tab1, tab2 = st.tabs(["📍　単点変換　— 1点ずつ入力", "📋　CSV 一括変換　— まとめて処理"])
+tab1, tab2 = st.tabs(["📍 単点変換", "📋 CSV 一括変換"])
 
 # ═══════════════════════════════════════════════════════
 # 9. TAB 1: 単点変換（複数点 / 地図ピン / 入力形式選択）
