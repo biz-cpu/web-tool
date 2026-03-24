@@ -557,7 +557,7 @@ def render_zone_suggestion_ll(lat_str: str, lon_str: str, fmt_key: str, current_
 st.set_page_config(
     page_title="GNSS SmartShift ICT",
     page_icon="📐", layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 st.markdown("""
@@ -646,224 +646,52 @@ section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] span { col
 /* pydeck地図の高さ統一 */
 .element-container iframe { border-radius:12px; }
 
-/* ══════════════════════════════════════════════════════
-   スマホ対応 CSS（ボタン行は縦並びのまま・サイドバーボタンのみ対応）
-   ══════════════════════════════════════════════════════ */
-@media (max-width: 768px) {
+/* ── サイドバーを完全非表示 ── */
+section[data-testid="stSidebar"] { display: none !important; }
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapsedControl"] { display: none !important; }
 
-  /* ── Streamlit ネイティブのサイドバー折りたたみボタン ──
-     スマホ時に常時表示・左上固定・デザイン統一             */
-  [data-testid="collapsedControl"],
-  [data-testid="stSidebarCollapsedControl"] {
-    position: fixed !important;
-    top: 8px !important;
-    left: 8px !important;
-    z-index: 999999 !important;
-    background: #0f172a !important;
-    border-radius: 10px !important;
-    border: 1.5px solid #475569 !important;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.55) !important;
-    width: 44px !important;
-    height: 44px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    opacity: 1 !important;
-    pointer-events: auto !important;
-    /* iOS: GPU レイヤーに昇格して fixed をキープ */
-    -webkit-transform: translateZ(0) !important;
-    transform: translateZ(0) !important;
-    will-change: transform !important;
-  }
-  [data-testid="collapsedControl"] button,
-  [data-testid="stSidebarCollapsedControl"] button {
-    color: #f1f5f9 !important;
-    font-size: 20px !important;
-    width: 44px !important;
-    height: 44px !important;
-    padding: 0 !important;
-    background: transparent !important;
-    border: none !important;
-  }
-  [data-testid="collapsedControl"] svg,
-  [data-testid="stSidebarCollapsedControl"] svg {
-    fill: #f1f5f9 !important;
-    width: 22px !important;
-    height: 22px !important;
-  }
-}
+
 </style>
 """, unsafe_allow_html=True)
 
-# ── ② iOS キーボード表示時の fixed 位置ずれ補正 ──────────────────
-# st.markdown の HTML は Streamlit メインページ DOM に直接注入される。
-# visualViewport API でキーボード表示を検知し、
-# collapsedControl ボタンの top を動的に補正する。
-st.markdown("""
-<script>
-(function(){
-  if (typeof window === 'undefined') return;
 
-  var SELECTORS = [
-    '[data-testid="collapsedControl"]',
-    '[data-testid="stSidebarCollapsedControl"]'
-  ];
-
-  function getBtn() {
-    for (var i = 0; i < SELECTORS.length; i++) {
-      var el = document.querySelector(SELECTORS[i]);
-      if (el) return el;
-    }
-    return null;
-  }
-
-  function adjust() {
-    var btn = getBtn();
-    if (!btn) return;
-    if (window.innerWidth > 768) { btn.style.top = ''; return; }
-
-    if (window.visualViewport) {
-      // visualViewport.offsetTop = キーボードなどでずれた上端の量
-      var offset = Math.round(window.visualViewport.offsetTop);
-      btn.style.top = (offset + 8) + 'px';
-    } else {
-      btn.style.top = '8px';
-    }
-  }
-
-  // visualViewport イベント（iOS15+ / Chrome Mobile）
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', adjust);
-    window.visualViewport.addEventListener('scroll', adjust);
-  }
-
-  // フォールバック
-  window.addEventListener('resize', adjust);
-
-  // DOM 構築完了後に初回実行（Streamlit は動的レンダリングのため少し待つ）
-  function tryInit(n) {
-    var btn = getBtn();
-    if (btn) { adjust(); return; }
-    if (n > 0) setTimeout(function(){ tryInit(n-1); }, 400);
-  }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function(){ tryInit(10); });
-  } else {
-    tryInit(10);
-  }
-
-
-})();
-</script>
-""", unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════════════════
 # 7. サイドバー共通設定
 # ═══════════════════════════════════════════════════════
 
-with st.sidebar:
-    # サイドバーのマージンを CSS でさらに詰める
-    st.markdown("""<style>
-section[data-testid="stSidebar"] .block-container{padding-top:0.8rem!important;padding-bottom:0.5rem!important;}
-section[data-testid="stSidebar"] .stMarkdown p{margin:0!important;padding:0!important;line-height:1.3!important;}
-section[data-testid="stSidebar"] .element-container{margin-bottom:0!important;}
-section[data-testid="stSidebar"] hr{margin:6px 0!important;}
-section[data-testid="stSidebar"] .stSelectbox{margin-bottom:0!important;}
-section[data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"]{gap:0!important;}
-</style>""", unsafe_allow_html=True)
+# ═══════════════════════════════════════════════════════
+# 7. 共通設定（メインエリア上部）
+# ═══════════════════════════════════════════════════════
 
-    st.markdown("<div style='font-size:15px;font-weight:700;color:#f1f5f9;padding:4px 0 6px'>⚙️ 共通設定</div>", unsafe_allow_html=True)
-    st.divider()
+# 設定をメインエリアに横並びで配置
+zone_inv = {v:k for k,v in JPC_ZONE_LABELS.items()}
+datum_inv = {v["label"]:k for k,v in DATUMS.items()}
 
-    # 座標系
-    st.markdown("<div style='font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:.12em;text-transform:uppercase;margin-bottom:3px'>📌 座標系（系番号）</div>", unsafe_allow_html=True)
-    zone_inv = {v:k for k,v in JPC_ZONE_LABELS.items()}
-    zone_lbl = st.selectbox("座標系", list(JPC_ZONE_LABELS.values()),
-                             index=8, label_visibility="collapsed")
-    Z = zone_inv[zone_lbl]
-    la0, lo0 = JPC_ORIGINS[Z]
-    st.markdown(f"<div style='display:flex;align-items:center;gap:6px;margin:3px 0 2px'>"
-                f"<span class='zbadge' style='font-size:10px;padding:1px 8px'>第 {Z} 系</span>"
-                f"<span style='font-size:10px;color:#64748b'>φ₀={la0}° λ₀={lo0}°</span></div>", unsafe_allow_html=True)
-
-    st.divider()
-
-    # 測地系
-    st.markdown("<div style='font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:.12em;text-transform:uppercase;margin-bottom:3px'>🌐 測地系</div>", unsafe_allow_html=True)
-    datum_inv = {v["label"]:k for k,v in DATUMS.items()}
-    datum_lbl = st.selectbox("測地系", list(datum_inv.keys()),
-                              index=0, label_visibility="collapsed")
-    DATUM = datum_inv[datum_lbl]
-
-    st.divider()
-
-    # ジオイドモデル
-    st.markdown("<div style='font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:.12em;text-transform:uppercase;margin-bottom:3px'>📡 ジオイドモデル</div>", unsafe_allow_html=True)
-    geoid_lbl = st.selectbox("ジオイドモデル", list(GEOID_MODELS.values()),
-                              index=0, label_visibility="collapsed")
-    GEOID_KEY = [k for k,v in GEOID_MODELS.items() if v==geoid_lbl][0]
-
-    st.divider()
-
-    # 地図スタイル
-    st.markdown("<div style='font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:.12em;text-transform:uppercase;margin-bottom:3px'>🗺️ 地図スタイル</div>", unsafe_allow_html=True)
-    map_style_lbl = st.selectbox("地図スタイル", list(MAP_STYLES.keys()),
-                                  index=1, label_visibility="collapsed")
-
-    st.divider()
-
-    st.markdown("""
-<div style='background:#1e293b;border:1px solid #334155;border-radius:8px;padding:8px 10px;margin:2px 0'>
-  <div style='display:flex;align-items:center;gap:6px;margin-bottom:4px'>
-    <span style='background:#16a34a;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px'>
-      ✓ 往復誤差 &lt; 0.01mm
-    </span>
-  </div>
-  <div style='font-size:10px;color:#94a3b8;line-height:1.7'>
-    GRS80楕円体 / m₀ = 0.9999<br>
-    Kawase (2011) 高次展開式
-  </div>
-</div>
-""", unsafe_allow_html=True)
-
-    st.divider()
-
-    # ── 免責事項・プライバシーポリシー ──
-    with st.expander("📋 免責事項・プライバシーポリシー"):
-        st.markdown("""
-<div style='font-size:11px;color:#94a3b8;line-height:1.9'>
-
-<div style='font-size:12px;font-weight:700;color:#e2e8f0;margin-bottom:6px'>⚠️ 免責事項</div>
-
-本ツール（GNSS SmartShift ICT）による座標変換・ジオイド高計算・各種出力値はすべて参考値です。<br>
-変換結果を実際の測量・設計・施工・出来形管理等に使用する場合は、<br>
-必ず有資格者（測量士・測量士補等）による検証・確認を行ってください。<br>
-計算結果の利用によって生じた損害・損失・不利益について、開発者は一切の責任を負いません。<br>
-<br>
-国土地理院ジオイドAPI（JPGEO2024/JPGEO2011）の応答遅延・取得失敗により<br>
-ジオイド高が取得できない場合、ジオイド高 N=0 として処理するため Z標高 = 楕円体高 として出力されます。<br>
-重要な成果については必ずジオイド高の取得状況を確認してください。
-
-<div style='font-size:12px;font-weight:700;color:#e2e8f0;margin:14px 0 6px'>🔒 プライバシーポリシー</div>
-
-本ツールに入力された座標値・高さ・点名等のデータは、サーバーに一切保存・記録されません。<br>
-すべての処理はブラウザのセッション内のみで完結し、ブラウザを閉じると同時に消去されます。<br>
-<br>
-外部サービスへの通信は以下のみです：<br>
-・<b>国土地理院 ジオイド高計算API</b>（vldb.gsi.go.jp）<br>
-　　送信内容：緯度・経度・選択したジオイドモデル種別のみ<br>
-　　取得結果は24時間ブラウザキャッシュに保持されます<br>
-<br>
-上記以外の個人情報・測量データの外部送信は一切行いません。
-
-<div style='font-size:12px;font-weight:700;color:#e2e8f0;margin:14px 0 6px'>©️ 著作権・利用について</div>
-
-© 2026 biz-cpu　｜　GNSS SmartShift ICT<br>
-本ソフトウェアの無断複製・改変・再配布・商用転用を禁じます。<br>
-業務利用（建設・測量・施工管理等）においては自己責任のもとでご利用ください。
-
-</div>
-""", unsafe_allow_html=True)
+with st.expander("⚙️ 共通設定", expanded=True):
+    _c1, _c2, _c3, _c4 = st.columns(4)
+    with _c1:
+        st.markdown("<div style='font-size:11px;font-weight:700;color:#374151;margin-bottom:4px'>📌 座標系（系番号）</div>", unsafe_allow_html=True)
+        zone_lbl = st.selectbox("座標系", list(JPC_ZONE_LABELS.values()),
+                                 index=8, label_visibility="collapsed", key="sel_zone")
+        Z = zone_inv[zone_lbl]
+        la0, lo0 = JPC_ORIGINS[Z]
+        st.markdown(f"<span class='zbadge'>第 {Z} 系</span> <span style='font-size:10px;color:#64748b'>φ₀={la0}° λ₀={lo0}°</span>", unsafe_allow_html=True)
+    with _c2:
+        st.markdown("<div style='font-size:11px;font-weight:700;color:#374151;margin-bottom:4px'>🌐 測地系</div>", unsafe_allow_html=True)
+        datum_lbl = st.selectbox("測地系", list(datum_inv.keys()),
+                                  index=0, label_visibility="collapsed", key="sel_datum")
+        DATUM = datum_inv[datum_lbl]
+    with _c3:
+        st.markdown("<div style='font-size:11px;font-weight:700;color:#374151;margin-bottom:4px'>📡 ジオイドモデル</div>", unsafe_allow_html=True)
+        geoid_lbl = st.selectbox("ジオイドモデル", list(GEOID_MODELS.values()),
+                                  index=0, label_visibility="collapsed", key="sel_geoid")
+        GEOID_KEY = [k for k,v in GEOID_MODELS.items() if v==geoid_lbl][0]
+    with _c4:
+        st.markdown("<div style='font-size:11px;font-weight:700;color:#374151;margin-bottom:4px'>🗺️ 地図スタイル</div>", unsafe_allow_html=True)
+        map_style_lbl = st.selectbox("地図スタイル", list(MAP_STYLES.keys()),
+                                      index=1, label_visibility="collapsed", key="sel_map")
 
 # ═══════════════════════════════════════════════════════
 # 8. メインヘッダー
@@ -873,11 +701,10 @@ section[data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"]{ga
 _FMT_DEFAULT = "decimal"
 _fmt_lbl_default = list(OUTPUT_FORMATS.keys())[0]
 
-st.markdown(f"""
+st.markdown("""
 <div class="app-hdr">
   <h1>🛰️ GNSS SmartShift ICT</h1>
   <p style='font-size:13px;color:#cbd5e1;margin:2px 0 0;font-weight:500;letter-spacing:.05em'>マルチメーカー対応 ローカライゼーション統合システム</p>
-  <p style='margin-top:6px'>第 {Z} 系 &nbsp;·&nbsp; {datum_lbl} &nbsp;·&nbsp; {geoid_lbl} &nbsp;·&nbsp; {map_style_lbl}</p>
 </div>""", unsafe_allow_html=True)
 
 # ── グローバルチェック（サイドバー設定の不整合を常時表示）──────
@@ -2106,6 +1933,19 @@ A. 変換結果の下に表示される **「📄 ファイル名」** 入力欄
 """)
 
     st.markdown("---")
+    # ── 免責事項・プライバシーポリシー ──
+    with st.expander("📋 免責事項・プライバシーポリシー"):
+        st.markdown("""
+本ツール（GNSS SmartShift ICT）による座標変換・ジオイド高計算・各種出力値はすべて参考値です。
+変換結果を実際の測量・設計・施工・出来形管理等に使用する場合は、必ず有資格者（測量士・測量士補等）による検証・確認を行ってください。
+計算結果の利用によって生じた損害・損失・不利益について、開発者は一切の責任を負いません。
+
+国土地理院ジオイドAPI（JPGEO2024/JPGEO2011）の取得失敗時は N=0 として処理するため Z標高 = 楕円体高 として出力されます。
+
+**プライバシー：** 入力データはサーバーに保存されません。外部通信は国土地理院ジオイドAPI（vldb.gsi.go.jp）のみです。
+
+© 2026 biz-cpu　｜　本ソフトウェアの無断複製・改変・再配布・商用転用を禁じます。
+""")
     st.caption("© 2026 biz-cpu　｜　GNSS SmartShift ICT　｜　Kawase (2011) 高次ガウス・クリューゲル展開式")
 
 # ── ページトップへ戻るボタン（parent.document に直接注入）──
