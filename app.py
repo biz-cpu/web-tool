@@ -567,6 +567,28 @@ html, body, [class*="css"] {
   font-family: 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic UI', 'Meiryo', sans-serif;
 }
 
+/* ── グローバル余白の圧縮 ── */
+/* Streamlit のブロック間デフォルトギャップを削減 */
+div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] {
+  gap: 0 !important;
+}
+/* 各ウィジェットの上下マージンを締める */
+div[data-testid="stVerticalBlock"] > * {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+/* ボタン・セレクトボックス周りの余白 */
+div[data-testid="stButton"] { margin-top: 2px !important; margin-bottom: 2px !important; }
+div[data-testid="stSelectbox"] { margin-top: 0 !important; margin-bottom: 0 !important; }
+/* radio の上下 */
+div[data-testid="stRadio"] { margin-top: 4px !important; margin-bottom: 0 !important; }
+/* タブコンテンツ内の先頭余白 */
+div[data-testid="stTabsContent"] > div { padding-top: 8px !important; }
+/* hr / divider を締める */
+hr { margin: 8px 0 !important; }
+/* markdown ブロックの余白 */
+div[data-testid="stMarkdownContainer"] p { margin-bottom: 4px !important; }
+
 /* ── サイドバー ── */
 section[data-testid="stSidebar"] {
   background:
@@ -925,15 +947,13 @@ st.markdown("""
 </div>""", unsafe_allow_html=True)
 
 # ── 使い方ボタン（タイトルと共通設定の間） ──
-st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
 _bBtn, _bSpc = st.columns([2, 8])
 with _bBtn:
     if st.button("❓ 使い方", use_container_width=True, key="btn_help"):
         _dlg_help()
-st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
 
 # ── 共通設定 ──
-st.markdown("<div style='background:#f1f5f9;border:1.5px solid #cbd5e1;border-radius:12px;padding:12px 20px 8px;margin-bottom:10px;margin-top:4px'><span style='font-size:14px;font-weight:700;color:#1e3a5f;letter-spacing:.02em'>⚙️ 共通設定</span></div>", unsafe_allow_html=True)
+st.markdown("<div style='background:#f1f5f9;border:1.5px solid #cbd5e1;border-radius:12px;padding:8px 16px 6px;margin-bottom:6px;margin-top:4px'><span style='font-size:14px;font-weight:700;color:#1e3a5f;letter-spacing:.02em'>⚙️ 共通設定</span></div>", unsafe_allow_html=True)
 _c1, _c2, _c3, _c4 = st.columns(4)
 with _c1:
     st.markdown("<div style='font-size:11px;font-weight:700;color:#374151;margin-bottom:4px'>📌 座標系（系番号）</div>", unsafe_allow_html=True)
