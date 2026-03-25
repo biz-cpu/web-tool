@@ -939,7 +939,6 @@ with _c1:
                              index=8, label_visibility="collapsed", key="sel_zone")
     Z = zone_inv[zone_lbl]
     la0, lo0 = JPC_ORIGINS[Z]
-    st.markdown(f"<span class='zbadge'>第 {Z} 系</span> <span style='font-size:10px;color:#64748b'>φ₀={la0}° λ₀={lo0}°</span>", unsafe_allow_html=True)
 with _c2:
     st.markdown("<div style='font-size:11px;font-weight:700;color:#374151;margin-bottom:4px'>🌐 測地系</div>", unsafe_allow_html=True)
     datum_lbl = st.selectbox("測地系", list(datum_inv.keys()),
