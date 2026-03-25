@@ -608,27 +608,40 @@ section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] span { col
 
 /* ── ヘッダー ── */
 .app-hdr {
-  background: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDEyMDAgNDAwIj4KICA8ZGVmcz4KICAgIDxyYWRpYWxHcmFkaWVudCBpZD0ic3BhY2UiIGN4PSI1MCUiIGN5PSI1MCUiIHI9IjcwJSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiMwYTE2MjgiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSI2MCUiIHN0b3AtY29sb3I9IiMwNTBkMWEiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMDIwODEwIi8+CiAgICA8L3JhZGlhbEdyYWRpZW50PgogICAgPHJhZGlhbEdyYWRpZW50IGlkPSJlYXJ0aCIgY3g9IjQwJSIgY3k9IjM1JSIgcj0iNjAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzFhNmI5ZSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjQwJSIgc3RvcC1jb2xvcj0iIzBmNGY3YSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjcwJSIgc3RvcC1jb2xvcj0iIzBhM2E1ZSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMwNjFkMzAiLz4KICAgIDwvcmFkaWFsR3JhZGllbnQ+CiAgICA8cmFkaWFsR3JhZGllbnQgaWQ9ImVhcnRoR2xvdyIgY3g9IjQwJSIgY3k9IjM1JSIgcj0iNjAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSI2MCUiIHN0b3AtY29sb3I9InRyYW5zcGFyZW50Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzFlODhlNTgwIi8+CiAgICA8L3JhZGlhbEdyYWRpZW50PgogICAgPHJhZGlhbEdyYWRpZW50IGlkPSJzYXRHbG93IiBjeD0iNTAlIiBjeT0iNTAlIiByPSI1MCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjNjBhNWZhIiBzdG9wLW9wYWNpdHk9IjAuOSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiM2MGE1ZmEiIHN0b3Atb3BhY2l0eT0iMCIvPgogICAgPC9yYWRpYWxHcmFkaWVudD4KICAgIDxmaWx0ZXIgaWQ9Imdsb3ciPgogICAgICA8ZmVHYXVzc2lhbkJsdXIgc3RkRGV2aWF0aW9uPSIyIiByZXN1bHQ9ImJsdXIiLz4KICAgICAgPGZlTWVyZ2U+PGZlTWVyZ2VOb2RlIGluPSJibHVyIi8+PGZlTWVyZ2VOb2RlIGluPSJTb3VyY2VHcmFwaGljIi8+PC9mZU1lcmdlPgogICAgPC9maWx0ZXI+CiAgICA8ZmlsdGVyIGlkPSJzb2Z0R2xvdyI+CiAgICAgIDxmZUdhdXNzaWFuQmx1ciBzdGREZXZpYXRpb249IjQiIHJlc3VsdD0iYmx1ciIvPgogICAgICA8ZmVNZXJnZT48ZmVNZXJnZU5vZGUgaW49ImJsdXIiLz48ZmVNZXJnZU5vZGUgaW49IlNvdXJjZUdyYXBoaWMiLz48L2ZlTWVyZ2U+CiAgICA8L2ZpbHRlcj4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0ib3JiaXQxIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzYwYTVmYSIgc3RvcC1vcGFjaXR5PSIwIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iNTAlIiBzdG9wLWNvbG9yPSIjNjBhNWZhIiBzdG9wLW9wYWNpdHk9IjAuNSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiM2MGE1ZmEiIHN0b3Atb3BhY2l0eT0iMCIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0ib3JiaXQyIiB4MT0iMTAwJSIgeTE9IjAlIiB4Mj0iMCUiIHkyPSIxMDAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM0ZDM5OSIgc3RvcC1vcGFjaXR5PSIwIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iNTAlIiBzdG9wLWNvbG9yPSIjMzRkMzk5IiBzdG9wLW9wYWNpdHk9IjAuMzUiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMzRkMzk5IiBzdG9wLW9wYWNpdHk9IjAiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8Y2xpcFBhdGggaWQ9ImNsaXAiPjxyZWN0IHdpZHRoPSIxMjAwIiBoZWlnaHQ9IjQwMCIvPjwvY2xpcFBhdGg+CiAgPC9kZWZzPgoKICA8IS0tIOWuh+WumeiDjOaZryAtLT4KICA8cmVjdCB3aWR0aD0iMTIwMCIgaGVpZ2h0PSI0MDAiIGZpbGw9InVybCgjc3BhY2UpIi8+CgogIDwhLS0g5pif77yI5bCP44GV44GE44KC44Gu77yJIC0tPgogIDxnIGNsaXAtcGF0aD0idXJsKCNjbGlwKSIgb3BhY2l0eT0iMC45Ij4KICAgIDwhLS0g5piO44KL44GE5pifIC0tPgogICAgPGNpcmNsZSBjeD0iNDUiIGN5PSIyMiIgcj0iMS4yIiBmaWxsPSIjZmZmIiBvcGFjaXR5PSIwLjk1Ii8+CiAgICA8Y2lyY2xlIGN4PSIxMjAiIGN5PSI2NyIgcj0iMC44IiBmaWxsPSIjZmZmIiBvcGFjaXR5PSIwLjciLz4KICAgIDxjaXJjbGUgY3g9IjE5OCIgY3k9IjE1IiByPSIxLjAiIGZpbGw9IiNmZmYiIG9wYWNpdHk9IjAuODUiLz4KICAgIDxjaXJjbGUgY3g9IjI2NyIgY3k9Ijg4IiByPSIwLjciIGZpbGw9IiNlOGY0ZmQiIG9wYWNpdHk9IjAuNiIvPgogICAgPGNpcmNsZSBjeD0iMzQ1IiBjeT0iMzQiIHI9IjEuMSIgZmlsbD0iI2ZmZiIgb3BhY2l0eT0iMC45Ii8+CiAgICA8Y2lyY2xlIGN4PSI0MjMiIGN5PSIxOCIgcj0iMC45IiBmaWxsPSIjZmZmIiBvcGFjaXR5PSIwLjc1Ii8+CiAgICA8Y2lyY2xlIGN4PSI1MTIiIGN5PSI1NSIgcj0iMS4zIiBmaWxsPSIjZmZmIiBvcGFjaXR5PSIwLjk1Ii8+CiAgICA8Y2lyY2xlIGN4PSI1NzgiIGN5PSIyOCIgcj0iMC44IiBmaWxsPSIjY2ZlOGZmIiBvcGFjaXR5PSIwLjciLz4KICAgIDxjaXJjbGUgY3g9IjY0NSIgY3k9IjcyIiByPSIxLjAiIGZpbGw9IiNmZmYiIG9wYWNpdHk9IjAuOCIvPgogICAgPGNpcmNsZSBjeD0iNzIzIiBjeT0iMjAiIHI9IjAuOSIgZmlsbD0iI2ZmZiIgb3BhY2l0eT0iMC44NSIvPgogICAgPGNpcmNsZSBjeD0iODEyIiBjeT0iNDUiIHI9IjEuMiIgZmlsbD0iI2ZmZiIgb3BhY2l0eT0iMC45Ii8+CiAgICA8Y2lyY2xlIGN4PSI4NzYiIGN5PSIxNSIgcj0iMC43IiBmaWxsPSIjZThmNGZkIiBvcGFjaXR5PSIwLjY1Ii8+CiAgICA8Y2lyY2xlIGN4PSI5MzQiIGN5PSI2MCIgcj0iMS4xIiBmaWxsPSIjZmZmIiBvcGFjaXR5PSIwLjg4Ii8+CiAgICA8Y2lyY2xlIGN4PSIxMDIzIiBjeT0iMzAiIHI9IjAuOCIgZmlsbD0iI2ZmZiIgb3BhY2l0eT0iMC43MiIvPgogICAgPGNpcmNsZSBjeD0iMTA5OCIgY3k9IjUwIiByPSIxLjAiIGZpbGw9IiNmZmYiIG9wYWNpdHk9IjAuOCIvPgogICAgPGNpcmNsZSBjeD0iMTEzNiIgY3k9IjI1IiByPSIwLjkiIGZpbGw9IiNjZmU4ZmYiIG9wYWNpdHk9IjAuNzUiLz48L2c+CiAgPGNpcmNsZSBjeD0iMTA1MCIgY3k9IjUyMCIgcj0iMzIwIiBmaWxsPSJ1cmwoI2VhcnRoKSIgb3BhY2l0eT0iMC44NSIvPgogIDxjaXJjbGUgY3g9IjEwNTAiIGN5PSI1MjAiIHI9IjMyMCIgZmlsbD0idXJsKCNlYXJ0aEdsb3cpIiBvcGFjaXR5PSIwLjUiLz4KPC9zdmc+") center/cover no-repeat;
-  border-radius:14px; padding:22px 28px; margin-bottom:0;
-  position: relative; overflow: hidden; height: 80px;
-  display: flex; flex-direction: column; justify-content: center;
+  background: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDEyMDAgNDAwIj4KICA8ZGVmcz4KICAgIDxyYWRpYWxHcmFkaWVudCBpZD0ic3BhY2UiIGN4PSI1MCUiIGN5PSI1MCUiIHI9IjcwJSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiMwYTE2MjgiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSI2MCUiIHN0b3AtY29sb3I9IiMwNTBkMWEiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMDIwODEwIi8+CiAgICA8L3JhZGlhbEdyYWRpZW50PgogICAgPHJhZGlhbEdyYWRpZW50IGlkPSJlYXJ0aCIgY3g9IjQwJSIgY3k9IjM1JSIgcj0iNjAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzFhNmI5ZSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjQwJSIgc3RvcC1jb2xvcj0iIzBmNGY3YSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjcwJSIgc3RvcC1jb2xvcj0iIzBhM2E1ZSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMwNjFkMzAiLz4KICAgIDwvcmFkaWFsR3JhZGllbnQ+CiAgICA8cmFkaWFsR3JhZGllbnQgaWQ9ImVhcnRoR2xvdyIgY3g9IjQwJSIgY3k9IjM1JSIgcj0iNjAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSI2MCUiIHN0b3AtY29sb3I9InRyYW5zcGFyZW50Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzFlODhlNTgwIi8+CiAgICA8L3JhZGlhbEdyYWRpZW50PgogICAgPHJhZGlhbEdyYWRpZW50IGlkPSJzYXRHbG93IiBjeD0iNTAlIiBjeT0iNTAlIiByPSI1MCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjNjBhNWZhIiBzdG9wLW9wYWNpdHk9IjAuOSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiM2MGE1ZmEiIHN0b3Atb3BhY2l0eT0iMCIvPgogICAgPC9yYWRpYWxHcmFkaWVudD4KICAgIDxmaWx0ZXIgaWQ9Imdsb3ciPgogICAgICA8ZmVHYXVzc2lhbkJsdXIgc3RkRGV2aWF0aW9uPSIyIiByZXN1bHQ9ImJsdXIiLz4KICAgICAgPGZlTWVyZ2U+PGZlTWVyZ2VOb2RlIGluPSJibHVyIi8+PGZlTWVyZ2VOb2RlIGluPSJTb3VyY2VHcmFwaGljIi8+PC9mZU1lcmdlPgogICAgPC9maWx0ZXI+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9Im9yYml0MSIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMTAwJSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiM2MGE1ZmEiIHN0b3Atb3BhY2l0eT0iMCIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjUwJSIgc3RvcC1jb2xvcj0iIzYwYTVmYSIgc3RvcC1vcGFjaXR5PSIwLjUiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjNjBhNWZhIiBzdG9wLW9wYWNpdHk9IjAiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8Y2xpcFBhdGggaWQ9ImNsaXAiPjxyZWN0IHdpZHRoPSIxMjAwIiBoZWlnaHQ9IjQwMCIvPjwvY2xpcFBhdGg+CiAgPC9kZWZzPgogIDxyZWN0IHdpZHRoPSIxMjAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0idXJsKCNzcGFjZSkiLz4KICA8Y2lyY2xlIGN4PSIxMDUwIiBjeT0iNTIwIiByPSIzMjAiIGZpbGw9InVybCgjZWFydGgpIiBvcGFjaXR5PSIwLjg1Ii8+CiAgPGNpcmNsZSBjeD0iMTA1MCIgY3k9IjUyMCIgcj0iMzIwIiBmaWxsPSJ1cmwoI2VhcnRoR2xvdykiIG9wYWNpdHk9IjAuNSIvPgo8L3N2Zz4=") center/cover no-repeat;
+  border-radius:14px; padding:20px 28px;
+  position: relative; overflow: hidden;
+  margin-bottom: 0;
 }
-/* 半透明オーバーレイで文字を読みやすく */
+/* 半透明オーバーレイ */
 .app-hdr::before {
   content: "";
   position: absolute; inset: 0;
-  background: linear-gradient(135deg,rgba(15,23,42,0.62) 0%,rgba(30,58,95,0.55) 100%);
+  background: linear-gradient(135deg,rgba(15,23,42,0.72) 0%,rgba(30,58,95,0.60) 100%);
   border-radius: 14px;
   z-index: 0;
 }
-.app-hdr > * { position: relative; z-index: 1; }
-.app-hdr h1 { margin:0; font-size:22px; font-weight:700; color:#f1f5f9;
-               text-shadow: 0 1px 8px rgba(0,0,0,0.6); }
-.app-hdr p  { margin:4px 0 0; color:#cbd5e1; font-size:11px; letter-spacing:.2em; text-transform:uppercase; }
-/* ヘルプボタン列の縦中央揃え */
-div[data-testid="stVerticalBlock"] > div:has(> div[data-testid="stButton"]) {
-  display: flex; align-items: center;
+.app-hdr-inner {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
 }
+.app-hdr h1 { margin:0; font-size:26px; font-weight:800; color:#f1f5f9;
+               text-shadow: 0 1px 8px rgba(0,0,0,0.6); letter-spacing:-.01em; }
+.app-hdr p  { margin:5px 0 0; color:#94c4f5; font-size:13px; font-weight:500; letter-spacing:.03em; }
+.app-hdr-btn a {
+  display: inline-block;
+  background: rgba(255,255,255,0.15);
+  color: #f1f5f9 !important;
+  border: 1.5px solid rgba(255,255,255,0.35);
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 14px; font-weight: 600;
+  text-decoration: none !important;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+  transition: background .15s;
+}
+.app-hdr-btn a:hover { background: rgba(255,255,255,0.28); }
 
 /* ── バッジ類 ── */
 .zbadge { display:inline-block; background:#f59e0b; color:#fff; font-weight:700;
@@ -719,11 +732,21 @@ div[data-testid="stTabs"] button[role="tab"] p {
 # 7. 共通設定（メインエリア上部）
 # ═══════════════════════════════════════════════════════
 
-st.markdown("""
+_hdr_left, _hdr_right = st.columns([7, 1], gap="small")
+with _hdr_left:
+    st.markdown("""
 <div class="app-hdr">
-  <h1>🛰️ GNSS SmartShift ICT</h1>
-  <p style='font-size:13px;color:#cbd5e1;margin:2px 0 0;font-weight:500;letter-spacing:.05em'>マルチメーカー対応 ローカライゼーション統合システム</p>
+  <div class="app-hdr-inner">
+    <div>
+      <h1>🛰️ GNSS SmartShift ICT</h1>
+      <p>マルチメーカー対応 ローカライゼーション統合システム</p>
+    </div>
+  </div>
 </div>""", unsafe_allow_html=True)
+with _hdr_right:
+    st.markdown("<div style='height:22px'></div>", unsafe_allow_html=True)
+    if st.button("❓ 使い方", use_container_width=True, key="btn_help"):
+        _dlg_help()
 
 @st.dialog("❓ 使い方ガイド", width="large")
 def _dlg_help():
@@ -890,15 +913,25 @@ A. 正常な動作です。往復変換時は出力フォーマットを **十�
 A. **小数部12桁以上** にしてください。例：`140.555914380000`（14桁）→ 正しく処理されます。
 """)
 
-_bcol, _bspc = st.columns([2, 8])
-with _bcol:
-    if st.button("❓ 使い方", use_container_width=True, key="btn_help"):
-        _dlg_help()
+    st.markdown("---")
+    st.markdown("#### 🎯 変換精度・仕様")
+    st.markdown("""
+| 項目 | 仕様 |
+|---|---|
+| **変換式** | Kawase (2011) 高次ガウス・クリューゲル展開式 |
+| **準拠楕円体** | GRS80（JGD2024・JGD2011・JGD2000）／WGS84楕円体（WGS84） |
+| **縮尺係数** | m₀ = 0.9999（全系共通） |
+| **対応座標系** | 公共測量 平面直角座標系 1〜19系 |
+| **往復変換誤差** | < 0.01 mm |
+| **ジオイド高** | 国土地理院 API（JPGEO2024 / JPGEO2011）・24hキャッシュ |
+| **旧日本測地系変換** | Helmert 3パラメータ（Δx=−148, Δy=+507, Δz=+685 m）|
+| **JGD2024** | GRS80楕円体・令和6年告示。JGD2011と同一楕円体パラメータ |
+""")
 
 zone_inv = {v:k for k,v in JPC_ZONE_LABELS.items()}
 datum_inv = {v["label"]:k for k,v in DATUMS.items()}
 
-st.markdown("<div style='background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px 18px 10px;margin-bottom:12px'><span style='font-size:12px;font-weight:700;color:#374151'>⚙️ 共通設定</span></div>", unsafe_allow_html=True)
+st.markdown("<div style='background:#f1f5f9;border:1.5px solid #cbd5e1;border-radius:12px;padding:12px 20px 8px;margin-bottom:10px;margin-top:10px'><span style='font-size:14px;font-weight:700;color:#1e3a5f;letter-spacing:.02em'>⚙️ 共通設定</span></div>", unsafe_allow_html=True)
 _c1, _c2, _c3, _c4 = st.columns(4)
 with _c1:
     st.markdown("<div style='font-size:11px;font-weight:700;color:#374151;margin-bottom:4px'>📌 座標系（系番号）</div>", unsafe_allow_html=True)
@@ -1821,7 +1854,7 @@ with tab2:
 
 # ── ページ最下部：免責事項・プライバシーポリシー ──
 st.markdown("---")
-with st.expander("📋 免責事項・プライバシーポリシー・仕様"):
+with st.expander("📋 免責事項・プライバシーポリシー"):
     st.markdown("""
 本ツール（GNSS SmartShift ICT）による座標変換・ジオイド高計算・各種出力値はすべて参考値です。
 変換結果を実際の測量・設計・施工・出来形管理等に使用する場合は、必ず有資格者（測量士・測量士補等）による検証・確認を行ってください。
@@ -1833,20 +1866,6 @@ with st.expander("📋 免責事項・プライバシーポリシー・仕様"):
 
 © 2026 biz-cpu　｜　本ソフトウェアの無断複製・改変・再配布・商用転用を禁じます。
 
----
-
-**変換精度・仕様**
-
-| 項目 | 仕様 |
-|---|---|
-| **変換式** | Kawase (2011) 高次ガウス・クリューゲル展開式 |
-| **準拠楕円体** | GRS80（JGD2024・JGD2011・JGD2000）／WGS84楕円体（WGS84） |
-| **縮尺係数** | m₀ = 0.9999（全系共通） |
-| **対応座標系** | 公共測量 平面直角座標系 1〜19系 |
-| **往復変換誤差** | < 0.01 mm |
-| **ジオイド高** | 国土地理院 API（JPGEO2024 / JPGEO2011）・24hキャッシュ |
-| **旧日本測地系変換** | Helmert 3パラメータ（Δx=−148, Δy=+507, Δz=+685 m）|
-| **JGD2024** | GRS80楕円体・令和6年告示。JGD2011と同一楕円体パラメータ |
 """)
 st.caption("© 2026 biz-cpu　｜　GNSS SmartShift ICT　｜　Kawase (2011) 高次ガウス・クリューゲル展開式")
 
