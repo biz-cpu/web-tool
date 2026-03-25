@@ -924,14 +924,9 @@ st.markdown("""
   <p>マルチメーカー対応 ローカライゼーション統合システム</p>
 </div>""", unsafe_allow_html=True)
 
-# ── 使い方ボタン ──
-_bcol, _bspc = st.columns([2, 8])
-with _bcol:
-    if st.button("❓ 使い方", use_container_width=True, key="btn_help"):
-        _dlg_help()
-
-st.markdown("<div style='background:#f1f5f9;border:1.5px solid #cbd5e1;border-radius:12px;padding:12px 20px 8px;margin-bottom:10px;margin-top:10px'><span style='font-size:14px;font-weight:700;color:#1e3a5f;letter-spacing:.02em'>⚙️ 共通設定</span></div>", unsafe_allow_html=True)
-_c1, _c2, _c3, _c4 = st.columns(4)
+# ── 共通設定 + 使い方ボタン（同一行） ──
+st.markdown("<div style='background:#f1f5f9;border:1.5px solid #cbd5e1;border-radius:12px;padding:12px 20px 8px;margin-bottom:10px;margin-top:14px'><span style='font-size:14px;font-weight:700;color:#1e3a5f;letter-spacing:.02em'>⚙️ 共通設定</span></div>", unsafe_allow_html=True)
+_c1, _c2, _c3, _c4, _c5 = st.columns([3, 3, 3, 3, 2])
 with _c1:
     st.markdown("<div style='font-size:11px;font-weight:700;color:#374151;margin-bottom:4px'>📌 座標系（系番号）</div>", unsafe_allow_html=True)
     zone_lbl = st.selectbox("座標系", list(JPC_ZONE_LABELS.values()),
@@ -953,6 +948,10 @@ with _c4:
     st.markdown("<div style='font-size:11px;font-weight:700;color:#374151;margin-bottom:4px'>🗺️ 地図スタイル</div>", unsafe_allow_html=True)
     map_style_lbl = st.selectbox("地図スタイル", list(MAP_STYLES.keys()),
                                   index=1, label_visibility="collapsed", key="sel_map")
+with _c5:
+    st.markdown("<div style='font-size:11px;font-weight:700;color:#374151;margin-bottom:4px'>&nbsp;</div>", unsafe_allow_html=True)
+    if st.button("❓ 使い方", use_container_width=True, key="btn_help"):
+        _dlg_help()
 
 # ═══════════════════════════════════════════════════════
 # 8. メインヘッダー
