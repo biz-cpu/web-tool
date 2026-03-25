@@ -925,10 +925,12 @@ st.markdown("""
 </div>""", unsafe_allow_html=True)
 
 # ── 使い方ボタン（タイトルと共通設定の間） ──
-_bL, _bC, _bR = st.columns([4, 2, 4])
-with _bC:
+st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+_bBtn, _bSpc = st.columns([2, 8])
+with _bBtn:
     if st.button("❓ 使い方", use_container_width=True, key="btn_help"):
         _dlg_help()
+st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
 
 # ── 共通設定 ──
 st.markdown("<div style='background:#f1f5f9;border:1.5px solid #cbd5e1;border-radius:12px;padding:12px 20px 8px;margin-bottom:10px;margin-top:4px'><span style='font-size:14px;font-weight:700;color:#1e3a5f;letter-spacing:.02em'>⚙️ 共通設定</span></div>", unsafe_allow_html=True)
@@ -1400,7 +1402,7 @@ with tab1:
                 st.download_button("📥 全点 CSV ダウンロード", csv_out2, _fn_ll_out or "dummy.csv",
                     "text/csv; charset=utf-8-sig", disabled=(_fn_ll_out is None))
         else:
-            st.info(f"緯度・経度を {in_fmt_lbl} 形式で入力してください。")
+            pass
 
     # ══════════════════════════════
     # 緯度経度 形式変換
@@ -1604,7 +1606,7 @@ with tab1:
                 st.download_button("📥 全点 CSV ダウンロード", csv_outc, _fn_cvt_out or "dummy.csv",
                     "text/csv; charset=utf-8-sig", disabled=(_fn_cvt_out is None))
         else:
-            st.info(f"緯度・経度を {in_fmt_cvt_lbl} 形式で入力してください。")
+            pass
 
 
 # ═══════════════════════════════════════════════════════
