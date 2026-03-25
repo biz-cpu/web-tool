@@ -732,22 +732,6 @@ div[data-testid="stTabs"] button[role="tab"] p {
 # 7. 共通設定（メインエリア上部）
 # ═══════════════════════════════════════════════════════
 
-_hdr_left, _hdr_right = st.columns([7, 1], gap="small")
-with _hdr_left:
-    st.markdown("""
-<div class="app-hdr">
-  <div class="app-hdr-inner">
-    <div>
-      <h1>🛰️ GNSS SmartShift ICT</h1>
-      <p>マルチメーカー対応 ローカライゼーション統合システム</p>
-    </div>
-  </div>
-</div>""", unsafe_allow_html=True)
-with _hdr_right:
-    st.markdown("<div style='height:22px'></div>", unsafe_allow_html=True)
-    if st.button("❓ 使い方", use_container_width=True, key="btn_help"):
-        _dlg_help()
-
 @st.dialog("❓ 使い方ガイド", width="large")
 def _dlg_help():
     with st.expander("📌 1. 基本的な使い方", expanded=True):
@@ -928,8 +912,22 @@ A. **小数部12桁以上** にしてください。例：`140.555914380000`（1
 | **JGD2024** | GRS80楕円体・令和6年告示。JGD2011と同一楕円体パラメータ |
 """)
 
+
 zone_inv = {v:k for k,v in JPC_ZONE_LABELS.items()}
 datum_inv = {v["label"]:k for k,v in DATUMS.items()}
+
+# ── タイトル ──
+st.markdown("""
+<div class="app-hdr">
+  <h1>🛰️ GNSS SmartShift ICT</h1>
+  <p>マルチメーカー対応 ローカライゼーション統合システム</p>
+</div>""", unsafe_allow_html=True)
+
+# ── 使い方ボタン ──
+_bcol, _bspc = st.columns([2, 8])
+with _bcol:
+    if st.button("❓ 使い方", use_container_width=True, key="btn_help"):
+        _dlg_help()
 
 st.markdown("<div style='background:#f1f5f9;border:1.5px solid #cbd5e1;border-radius:12px;padding:12px 20px 8px;margin-bottom:10px;margin-top:10px'><span style='font-size:14px;font-weight:700;color:#1e3a5f;letter-spacing:.02em'>⚙️ 共通設定</span></div>", unsafe_allow_html=True)
 _c1, _c2, _c3, _c4 = st.columns(4)
