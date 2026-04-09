@@ -954,24 +954,24 @@ with _bBtn:
 
 # ── 共通設定 ──
 st.markdown("<div style='background:#f1f5f9;border:1.5px solid #cbd5e1;border-radius:12px;padding:8px 16px 6px;margin-bottom:6px;margin-top:4px'><span style='font-size:14px;font-weight:700;color:#1e3a5f;letter-spacing:.02em'>⚙️ 共通設定</span></div>", unsafe_allow_html=True)
-_c1, _c2, _c3, _c4 = st.columns(4)
-with _c1:
+_gcol1, _gcol2, _gcol3, _gcol4 = st.columns(4)
+with _gcol1:
     st.markdown("<div style='font-size:11px;font-weight:700;color:#374151;margin-bottom:4px'>📌 座標系（系番号）</div>", unsafe_allow_html=True)
     zone_lbl = st.selectbox("座標系", list(JPC_ZONE_LABELS.values()),
                              index=8, label_visibility="collapsed", key="sel_zone")
     Z = zone_inv[zone_lbl]
     la0, lo0 = JPC_ORIGINS[Z]
-with _c2:
+with _gcol2:
     st.markdown("<div style='font-size:11px;font-weight:700;color:#374151;margin-bottom:4px'>🌐 測地系</div>", unsafe_allow_html=True)
     datum_lbl = st.selectbox("測地系", list(datum_inv.keys()),
                               index=0, label_visibility="collapsed", key="sel_datum")
     DATUM = datum_inv[datum_lbl]
-with _c3:
+with _gcol3:
     st.markdown("<div style='font-size:11px;font-weight:700;color:#374151;margin-bottom:4px'>📡 ジオイドモデル</div>", unsafe_allow_html=True)
     geoid_lbl = st.selectbox("ジオイドモデル", list(GEOID_MODELS.values()),
                               index=0, label_visibility="collapsed", key="sel_geoid")
     GEOID_KEY = [k for k,v in GEOID_MODELS.items() if v==geoid_lbl][0]
-with _c4:
+with _gcol4:
     st.markdown("<div style='font-size:11px;font-weight:700;color:#374151;margin-bottom:4px'>🗺️ 地図スタイル</div>", unsafe_allow_html=True)
     map_style_lbl = st.selectbox("地図スタイル", list(MAP_STYLES.keys()),
                                   index=1, label_visibility="collapsed", key="sel_map")
