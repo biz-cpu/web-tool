@@ -1645,18 +1645,25 @@ with tab1:
         _lc_empty = {"name":"","sx":"","sy":"","sz":"","lat":"","lon":"","h":""}
         if "pts_local" not in st.session_state:
             st.session_state["pts_local"] = [dict(_lc_empty), dict(_lc_empty)]
+        if "lc_csv_ver" not in st.session_state:
+            st.session_state["lc_csv_ver"] = 0
+        if "lc_csv_msg" not in st.session_state:
+            st.session_state["lc_csv_msg"] = ""
 
         # ── CSV一括インポート ──
-        _lc_up = st.file_uploader("📂 CSV一括インポート（点名,X,Y,Z,緯度,経度,楕円体高）",
-                                   type=["csv","txt"], key="lc_csv_up")
+        _lc_up = st.file_uploader(
+            "📂 CSVインポート（点名, 測量X, 測量Y, 測量Z, GNSS緯度, GNSS経度, 楕円体高）",
+            type=["csv","txt"],
+            key=f"lc_csv_up_{st.session_state['lc_csv_ver']}"
+        )
         if _lc_up is not None:
             try:
-                import io as _io
                 _lc_text = _lc_up.read().decode("utf-8-sig")
                 _lc_rows = []
                 for _lc_line in _lc_text.splitlines():
                     _lc_line = _lc_line.strip()
-                    if not _lc_line: continue
+                    if not _lc_line:
+                        continue
                     _lc_cols = [c.strip() for c in _lc_line.split(",")]
                     if len(_lc_cols) >= 7:
                         _lc_rows.append({
@@ -1670,14 +1677,21 @@ with tab1:
                         })
                 if _lc_rows:
                     st.session_state["pts_local"] = _lc_rows
-                    st.success(f"✅ {len(_lc_rows)} 点を読み込みました")
+                    st.session_state["lc_csv_ver"] += 1
+                    st.session_state["lc_csv_msg"] = f"✅ {len(_lc_rows)} 点を読み込みました"
                     st.rerun()
                 else:
-                    st.error("❌ 読み込める行がありません。列数（7列以上）を確認してください。")
+                    st.error("❌ 読み込める行がありません（7列以上必要）")
             except Exception as _lc_ex:
                 st.error(f"❌ CSV読み込みエラー: {_lc_ex}")
 
+        # 読み込み完了メッセージ（rerun後に表示）
+        if st.session_state.get("lc_csv_msg"):
+            st.success(st.session_state["lc_csv_msg"])
+            st.session_state["lc_csv_msg"] = ""
+
         pts_local = st.session_state["pts_local"]
+        _lc_v = st.session_state["lc_csv_ver"]
 
         col_add_l, col_clr_l, _ = st.columns([1, 1, 6])
         with col_add_l:
@@ -1687,6 +1701,7 @@ with tab1:
         with col_clr_l:
             if st.button("🗑 全クリア", key="clr_local"):
                 st.session_state["pts_local"] = [dict(_lc_empty), dict(_lc_empty)]
+                st.session_state["lc_csv_ver"] += 1
                 st.rerun()
 
         # ── ヘッダー行 ──
@@ -1699,15 +1714,15 @@ with tab1:
 
         for i, pt in enumerate(pts_local):
             ca, cb, cc, cd, ce, cf, cg, cdel = st.columns([1.5, 2, 2, 1.5, 2, 2, 1.5, 0.4])
-            with ca: pt["name"] = st.text_input("点名",      value=pt.get("name",""), key=f"lc_name_{i}", placeholder="BM-1",          label_visibility="collapsed")
-            with cb: pt["sx"]   = st.text_input("測量X",     value=pt.get("sx",""),   key=f"lc_sx_{i}",   placeholder="151940.92",      label_visibility="collapsed")
-            with cc: pt["sy"]   = st.text_input("測量Y",     value=pt.get("sy",""),   key=f"lc_sy_{i}",   placeholder="44023.112",      label_visibility="collapsed")
-            with cd: pt["sz"]   = st.text_input("測量Z",     value=pt.get("sz",""),   key=f"lc_sz_{i}",   placeholder="249.837",        label_visibility="collapsed")
-            with ce: pt["lat"]  = st.text_input("GNSS緯度",  value=pt.get("lat",""),  key=f"lc_lat_{i}",  placeholder="37.36827786",    label_visibility="collapsed")
-            with cf: pt["lon"]  = st.text_input("GNSS経度",  value=pt.get("lon",""),  key=f"lc_lon_{i}",  placeholder="140.33036534",   label_visibility="collapsed")
-            with cg: pt["h"]    = st.text_input("楕円体高",  value=pt.get("h",""),    key=f"lc_h_{i}",    placeholder="292.8286",       label_visibility="collapsed")
+            with ca: pt["name"] = st.text_input("点名",      value=pt.get("name",""), key=f"lc_name_{i}_{_lc_v}", placeholder="BM-1",          label_visibility="collapsed")
+            with cb: pt["sx"]   = st.text_input("測量X",     value=pt.get("sx",""),   key=f"lc_sx_{i}_{_lc_v}",   placeholder="151940.92",      label_visibility="collapsed")
+            with cc: pt["sy"]   = st.text_input("測量Y",     value=pt.get("sy",""),   key=f"lc_sy_{i}_{_lc_v}",   placeholder="44023.112",      label_visibility="collapsed")
+            with cd: pt["sz"]   = st.text_input("測量Z",     value=pt.get("sz",""),   key=f"lc_sz_{i}_{_lc_v}",   placeholder="249.837",        label_visibility="collapsed")
+            with ce: pt["lat"]  = st.text_input("GNSS緯度",  value=pt.get("lat",""),  key=f"lc_lat_{i}_{_lc_v}",  placeholder="37.36827786",    label_visibility="collapsed")
+            with cf: pt["lon"]  = st.text_input("GNSS経度",  value=pt.get("lon",""),  key=f"lc_lon_{i}_{_lc_v}",  placeholder="140.33036534",   label_visibility="collapsed")
+            with cg: pt["h"]    = st.text_input("楕円体高",  value=pt.get("h",""),    key=f"lc_h_{i}_{_lc_v}",    placeholder="292.8286",       label_visibility="collapsed")
             with cdel:
-                if len(pts_local) > 2 and st.button("✕", key=f"lc_del_{i}"):
+                if len(pts_local) > 2 and st.button("✕", key=f"lc_del_{i}_{_lc_v}"):
                     pts_local.pop(i); st.rerun()
             st.session_state["pts_local"][i] = pt
 
