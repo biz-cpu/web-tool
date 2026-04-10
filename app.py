@@ -954,24 +954,24 @@ with _bBtn:
 
 # ── 共通設定 ──
 st.markdown("<div style='background:#f1f5f9;border:1.5px solid #cbd5e1;border-radius:12px;padding:8px 16px 6px;margin-bottom:6px;margin-top:4px'><span style='font-size:14px;font-weight:700;color:#1e3a5f;letter-spacing:.02em'>⚙️ 共通設定</span></div>", unsafe_allow_html=True)
-_gcol1, _gcol2, _gcol3, _gcol4 = st.columns(4)
-with _gcol1:
+_c1, _c2, _c3, _c4 = st.columns(4)
+with _c1:
     st.markdown("<div style='font-size:11px;font-weight:700;color:#374151;margin-bottom:4px'>📌 座標系（系番号）</div>", unsafe_allow_html=True)
     zone_lbl = st.selectbox("座標系", list(JPC_ZONE_LABELS.values()),
                              index=8, label_visibility="collapsed", key="sel_zone")
     Z = zone_inv[zone_lbl]
     la0, lo0 = JPC_ORIGINS[Z]
-with _gcol2:
+with _c2:
     st.markdown("<div style='font-size:11px;font-weight:700;color:#374151;margin-bottom:4px'>🌐 測地系</div>", unsafe_allow_html=True)
     datum_lbl = st.selectbox("測地系", list(datum_inv.keys()),
                               index=0, label_visibility="collapsed", key="sel_datum")
     DATUM = datum_inv[datum_lbl]
-with _gcol3:
+with _c3:
     st.markdown("<div style='font-size:11px;font-weight:700;color:#374151;margin-bottom:4px'>📡 ジオイドモデル</div>", unsafe_allow_html=True)
     geoid_lbl = st.selectbox("ジオイドモデル", list(GEOID_MODELS.values()),
                               index=0, label_visibility="collapsed", key="sel_geoid")
     GEOID_KEY = [k for k,v in GEOID_MODELS.items() if v==geoid_lbl][0]
-with _gcol4:
+with _c4:
     st.markdown("<div style='font-size:11px;font-weight:700;color:#374151;margin-bottom:4px'>🗺️ 地図スタイル</div>", unsafe_allow_html=True)
     map_style_lbl = st.selectbox("地図スタイル", list(MAP_STYLES.keys()),
                                   index=1, label_visibility="collapsed", key="sel_map")
@@ -1062,7 +1062,7 @@ def _swap_ll():
 # ─────────────────────────────────────────────────────────
 with tab1:
     dir1 = st.radio("変換方向",
-                    ["緯度経度 形式変換", "平面直角 → 緯度経度", "緯度経度 → 平面直角"],
+                    ["緯度経度 形式変換", "平面直角 → 緯度経度", "緯度経度 → 平面直角", "📐 ローカライゼーション計算"],
                     horizontal=True, key="d1")
     st.markdown("---")
 
@@ -1427,7 +1427,7 @@ with tab1:
     # ══════════════════════════════
     # 緯度経度 形式変換
     # ══════════════════════════════
-    else:  # dir1 == "緯度経度 形式変換"
+    elif dir1 == "緯度経度 形式変換":
         # session_state 初期化
         if "pts_cvt" not in st.session_state:
             st.session_state["pts_cvt"] = [{"name":"","lat":"","lon":"","h":""}]
@@ -1627,6 +1627,180 @@ with tab1:
                     "text/csv; charset=utf-8-sig", disabled=(_fn_cvt_out is None))
         else:
             pass
+
+    # ══════════════════════════════
+    # ローカライゼーション計算
+    # ══════════════════════════════
+    elif dir1 == "📐 ローカライゼーション計算":
+        st.markdown("""
+<div style='background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 16px;margin-bottom:12px;font-size:13px;color:#1e40af'>
+📌 <b>使い方：</b> GNSS測量した基準点の緯度・経度・楕円体高と、対応する現場の既存測量座標（X・Y・Z）を入力してください。<br>
+2点以上でローカライゼーションパラメータを計算します。3点以上で各点の残差も表示します。
+</div>""", unsafe_allow_html=True)
+
+        # ── セッション初期化 ──
+        if "pts_local" not in st.session_state:
+            st.session_state["pts_local"] = [
+                {"name":"","lat":"","lon":"","h":"","sx":"","sy":"","sz":""},
+                {"name":"","lat":"","lon":"","h":"","sx":"","sy":"","sz":""},
+            ]
+        pts_local = st.session_state["pts_local"]
+
+        col_add_l, col_clr_l, _ = st.columns([1, 1, 6])
+        with col_add_l:
+            if st.button("＋ 点を追加", key="add_local"):
+                pts_local.append({"name":"","lat":"","lon":"","h":"","sx":"","sy":"","sz":""})
+                st.rerun()
+        with col_clr_l:
+            if st.button("🗑 全クリア", key="clr_local"):
+                st.session_state["pts_local"] = [
+                    {"name":"","lat":"","lon":"","h":"","sx":"","sy":"","sz":""},
+                    {"name":"","lat":"","lon":"","h":"","sx":"","sy":"","sz":""},
+                ]
+                st.rerun()
+
+        st.markdown("---")
+        for i, pt in enumerate(pts_local):
+            with st.container():
+                st.markdown(f"<div class='pt-title'>#{i+1} 基準点</div>", unsafe_allow_html=True)
+                ca, cb, cc, cd, ce, cf, cg, cdel = st.columns([1.5, 2, 2, 1.5, 2, 2, 1.5, 0.4])
+                with ca:
+                    pt["name"] = st.text_input("点名", value=pt["name"], key=f"lc_name_{i}", placeholder="BM-1")
+                with cb:
+                    pt["lat"] = st.text_input("GNSS緯度", value=pt["lat"], key=f"lc_lat_{i}", placeholder="35.68123456")
+                with cc:
+                    pt["lon"] = st.text_input("GNSS経度", value=pt["lon"], key=f"lc_lon_{i}", placeholder="139.68123456")
+                with cd:
+                    pt["h"] = st.text_input("楕円体高(m)", value=pt["h"], key=f"lc_h_{i}", placeholder="89.555")
+                with ce:
+                    pt["sx"] = st.text_input("測量X(m)", value=pt["sx"], key=f"lc_sx_{i}", placeholder="現場測量X")
+                with cf:
+                    pt["sy"] = st.text_input("測量Y(m)", value=pt["sy"], key=f"lc_sy_{i}", placeholder="現場測量Y")
+                with cg:
+                    pt["sz"] = st.text_input("測量Z(m)", value=pt["sz"], key=f"lc_sz_{i}", placeholder="現場標高")
+                with cdel:
+                    st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+                    if len(pts_local) > 2 and st.button("✕", key=f"lc_del_{i}"):
+                        pts_local.pop(i)
+                        st.rerun()
+            st.session_state["pts_local"][i] = pt
+
+        st.markdown("---")
+
+        if st.button("🔢 ローカライゼーション計算", key="calc_local", type="primary", use_container_width=True):
+            import math as _math
+            import numpy as _np
+
+            valid_pts = []
+            errors = []
+            for i, pt in enumerate(pts_local):
+                name = pt["name"] or f"#{i+1}"
+                try:
+                    lat_dd, _ = auto_parse_angle(pt["lat"])
+                    lon_dd, _ = auto_parse_angle(pt["lon"])
+                    h_val  = float(pt["h"]) if pt["h"].strip() else 0.0
+                    sx_val = float(pt["sx"])
+                    sy_val = float(pt["sy"])
+                    sz_val = float(pt["sz"]) if pt["sz"].strip() else None
+                    res = latlon_to_jpc(lat_dd, lon_dd, Z)
+                    if res is None:
+                        errors.append(f"{name}: 変換失敗（系番号確認）")
+                        continue
+                    gx, gy = res
+                    N = fetch_geoid(lat_dd, lon_dd, GEOID_KEY)
+                    z_ortho = (h_val - N) if N is not None else h_val
+                    valid_pts.append({"name": name, "gx": gx, "gy": gy, "sx": sx_val, "sy": sy_val, "gz": z_ortho, "sz": sz_val})
+                except Exception as ex:
+                    errors.append(f"{name}: {ex}")
+
+            for e in errors:
+                st.error(f"❌ {e}")
+
+            if len(valid_pts) < 2:
+                st.warning("⚠️ 有効な基準点が2点以上必要です。")
+            else:
+                n = len(valid_pts)
+                # Similarity変換（最小二乗）
+                A = _np.zeros((2*n, 4))
+                L = _np.zeros(2*n)
+                for idx, p in enumerate(valid_pts):
+                    A[2*idx,   :] = [ p["gx"], -p["gy"], 1, 0]
+                    A[2*idx+1, :] = [ p["gy"],  p["gx"], 0, 1]
+                    L[2*idx]      = p["sx"]
+                    L[2*idx+1]    = p["sy"]
+                params, _, _, _ = _np.linalg.lstsq(A, L, rcond=None)
+                a_p, b_p, Tx, Ty = params
+                scale    = _math.sqrt(a_p**2 + b_p**2)
+                rotation = _math.degrees(_math.atan2(b_p, a_p))
+                z_pairs  = [p for p in valid_pts if p["sz"] is not None]
+                dz_mean  = sum(p["sz"] - p["gz"] for p in z_pairs) / max(len(z_pairs), 1)
+
+                # 残差
+                residuals = []
+                for p in valid_pts:
+                    cx = a_p*p["gx"] - b_p*p["gy"] + Tx
+                    cy = b_p*p["gx"] + a_p*p["gy"] + Ty
+                    dx = (p["sx"] - cx) * 1000
+                    dy = (p["sy"] - cy) * 1000
+                    dr = _math.sqrt(dx**2 + dy**2)
+                    residuals.append({"name": p["name"], "dx_mm": dx, "dy_mm": dy, "dr_mm": dr})
+                rmse = _math.sqrt(sum(r["dr_mm"]**2 for r in residuals) / n)
+
+                st.success("✅ 計算完了")
+                rc1, rc2, rc3, rc4 = st.columns(4)
+                with rc1:
+                    st.markdown(f"""<div class='rc'>
+                        <div class='rc-lbl'>SCALE（スケール）</div>
+                        <div class='rc-val'>{scale:.8f}</div>
+                        <div class='rc-sub'>ppm: {(scale-1)*1e6:+.3f}</div>
+                    </div>""", unsafe_allow_html=True)
+                with rc2:
+                    st.markdown(f"""<div class='rc'>
+                        <div class='rc-lbl'>ROTATION（回転角）</div>
+                        <div class='rc-val'>{rotation:.6f}°</div>
+                        <div class='rc-sub'>{rotation*3600:.3f}″</div>
+                    </div>""", unsafe_allow_html=True)
+                with rc3:
+                    st.markdown(f"""<div class='rc'>
+                        <div class='rc-lbl'>Tx（X平行移動）</div>
+                        <div class='rc-val'>{Tx:.4f} m</div>
+                        <div class='rc-sub'>Ty: {Ty:.4f} m</div>
+                    </div>""", unsafe_allow_html=True)
+                with rc4:
+                    st.markdown(f"""<div class='rc'>
+                        <div class='rc-lbl'>ΔZ（標高オフセット）</div>
+                        <div class='rc-val'>{dz_mean:.4f} m</div>
+                        <div class='rc-sub'>RMSE: {rmse:.1f} mm</div>
+                    </div>""", unsafe_allow_html=True)
+
+                if n >= 3:
+                    st.markdown("#### 📊 各点の残差")
+                    _df_res = pd.DataFrame([{
+                        "点名": r["name"],
+                        "ΔX (mm)": f"{r['dx_mm']:+.1f}",
+                        "ΔY (mm)": f"{r['dy_mm']:+.1f}",
+                        "水平残差 (mm)": f"{r['dr_mm']:.1f}",
+                        "判定": "✅ 良好" if r["dr_mm"] < 20 else ("⚠️ 注意" if r["dr_mm"] < 50 else "❌ 要確認"),
+                    } for r in residuals])
+                    st.dataframe(_df_res, use_container_width=True, hide_index=True)
+
+                csv_lines_l = [csv_row("パラメータ","値","備考")]
+                csv_lines_l += [
+                    csv_row("Scale",          f"{scale:.8f}",    f"ppm: {(scale-1)*1e6:+.3f}"),
+                    csv_row("Rotation(deg)",  f"{rotation:.6f}", f"秒: {rotation*3600:.3f}"),
+                    csv_row("Tx(m)",          f"{Tx:.4f}",       "X平行移動"),
+                    csv_row("Ty(m)",          f"{Ty:.4f}",       "Y平行移動"),
+                    csv_row("dZ(m)",          f"{dz_mean:.4f}",  "標高オフセット"),
+                    csv_row("RMSE(mm)",       f"{rmse:.1f}",     f"使用点数: {n}"),
+                    csv_row("","",""),
+                    csv_row("点名","ΔX(mm)","ΔY(mm)","水平残差(mm)"),
+                ] + [csv_row(r["name"], f"{r['dx_mm']:+.1f}", f"{r['dy_mm']:+.1f}", f"{r['dr_mm']:.1f}") for r in residuals]
+                _fn_local = _csv_filename_ui("csv_fn_local", "例: 現場名_ローカライゼーション")
+                st.download_button("📥 パラメータ CSV ダウンロード",
+                    "\ufeff" + "\n".join(csv_lines_l),
+                    _fn_local or "dummy.csv",
+                    "text/csv; charset=utf-8-sig",
+                    disabled=(_fn_local is None))
 
 
 # ═══════════════════════════════════════════════════════
