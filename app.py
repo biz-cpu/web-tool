@@ -1649,6 +1649,8 @@ with tab1:
             st.session_state["lc_csv_ver"] = 0
         if "lc_csv_msg" not in st.session_state:
             st.session_state["lc_csv_msg"] = ""
+        if "lc_result" not in st.session_state:
+            st.session_state["lc_result"] = None
 
         # ── CSV一括インポート ──
         _lc_up = st.file_uploader(
@@ -1702,6 +1704,7 @@ with tab1:
             if st.button("🗑 全クリア", key="clr_local"):
                 st.session_state["pts_local"] = [dict(_lc_empty), dict(_lc_empty)]
                 st.session_state["lc_csv_ver"] += 1
+                st.session_state["lc_result"] = None
                 st.rerun()
 
         # ── ヘッダー行 ──
@@ -1840,52 +1843,74 @@ with tab1:
                     residuals.append({"name": p["name"], "dx_mm": dx, "dy_mm": dy, "dr_mm": dr})
                 rmse = _math.sqrt(sum(r["dr_mm"]**2 for r in residuals) / n)
 
-                st.success("✅ 計算完了")
-                rc1, rc2, rc3, rc4 = st.columns(4)
-                with rc1:
-                    st.markdown(f"""<div class='rc'><div class='rc-lbl'>SCALE（スケール）</div>
-                        <div class='rc-val'>{scale:.8f}</div>
-                        <div class='rc-sub'>ppm: {(scale-1)*1e6:+.3f}</div></div>""", unsafe_allow_html=True)
-                with rc2:
-                    st.markdown(f"""<div class='rc'><div class='rc-lbl'>ROTATION（回転角）</div>
-                        <div class='rc-val'>{rotation:.6f}°</div>
-                        <div class='rc-sub'>{rotation*3600:.3f}″</div></div>""", unsafe_allow_html=True)
-                with rc3:
-                    st.markdown(f"""<div class='rc'><div class='rc-lbl'>Tx（X平行移動）</div>
-                        <div class='rc-val'>{Tx:.4f} m</div>
-                        <div class='rc-sub'>Ty: {Ty:.4f} m</div></div>""", unsafe_allow_html=True)
-                with rc4:
-                    st.markdown(f"""<div class='rc'><div class='rc-lbl'>ΔZ（標高オフセット）</div>
-                        <div class='rc-val'>{dz_mean:.4f} m</div>
-                        <div class='rc-sub'>RMSE: {rmse:.1f} mm</div></div>""", unsafe_allow_html=True)
+                # 結果をセッションに保存（ファイル名入力のrerunで消えないよう）
+                st.session_state["lc_result"] = {
+                    "scale": scale, "rotation": rotation,
+                    "Tx": Tx, "Ty": Ty, "dz_mean": dz_mean,
+                    "rmse": rmse, "n": n, "residuals": residuals,
+                }
 
-                st.markdown("#### 📊 各点の残差")
-                _df_res = pd.DataFrame([{
-                    "点名": r["name"],
-                    "ΔX (mm)": f"{r['dx_mm']:+.1f}",
-                    "ΔY (mm)": f"{r['dy_mm']:+.1f}",
-                    "水平残差 (mm)": f"{r['dr_mm']:.1f}",
-                    "判定": "✅ 良好" if r["dr_mm"] < 20 else ("⚠️ 注意" if r["dr_mm"] < 50 else "❌ 要確認"),
-                } for r in residuals])
-                st.dataframe(_df_res, use_container_width=True, hide_index=True)
+        # ── 計算結果の表示（セッションから復元） ──
+        if st.session_state.get("lc_result"):
+            _r = st.session_state["lc_result"]
+            scale    = _r["scale"];    rotation = _r["rotation"]
+            Tx       = _r["Tx"];       Ty       = _r["Ty"]
+            dz_mean  = _r["dz_mean"];  rmse     = _r["rmse"]
+            n        = _r["n"];        residuals= _r["residuals"]
 
-                csv_lines_l = [csv_row("パラメータ","値","備考")]
-                csv_lines_l += [
-                    csv_row("Scale",         f"{scale:.8f}",    f"ppm: {(scale-1)*1e6:+.3f}"),
-                    csv_row("Rotation(deg)", f"{rotation:.6f}", f"秒: {rotation*3600:.3f}"),
-                    csv_row("Tx(m)",         f"{Tx:.4f}",       "X平行移動"),
-                    csv_row("Ty(m)",         f"{Ty:.4f}",       "Y平行移動"),
-                    csv_row("dZ(m)",         f"{dz_mean:.4f}",  "標高オフセット"),
-                    csv_row("RMSE(mm)",      f"{rmse:.1f}",     f"使用点数: {n}"),
-                    csv_row("","",""),
-                    csv_row("点名","ΔX(mm)","ΔY(mm)","水平残差(mm)"),
-                ] + [csv_row(r["name"], f"{r['dx_mm']:+.1f}", f"{r['dy_mm']:+.1f}", f"{r['dr_mm']:.1f}") for r in residuals]
-                _fn_local = _csv_filename_ui("csv_fn_local", "例: 現場名_ローカライゼーション")
-                st.download_button("📥 パラメータ CSV ダウンロード",
-                    "\ufeff" + "\n".join(csv_lines_l),
-                    _fn_local or "dummy.csv",
-                    "text/csv; charset=utf-8-sig",
-                    disabled=(_fn_local is None))
+            st.success("✅ 計算完了")
+            rc1, rc2, rc3, rc4 = st.columns(4)
+            with rc1:
+                st.markdown(f"""<div class='rc'><div class='rc-lbl'>SCALE（スケール）</div>
+                    <div class='rc-val'>{scale:.8f}</div>
+                    <div class='rc-sub'>ppm: {(scale-1)*1e6:+.3f}</div></div>""", unsafe_allow_html=True)
+            with rc2:
+                st.markdown(f"""<div class='rc'><div class='rc-lbl'>ROTATION（回転角）</div>
+                    <div class='rc-val'>{rotation:.6f}°</div>
+                    <div class='rc-sub'>{rotation*3600:.3f}″</div></div>""", unsafe_allow_html=True)
+            with rc3:
+                st.markdown(f"""<div class='rc'><div class='rc-lbl'>Tx（X平行移動）</div>
+                    <div class='rc-val'>{Tx:.4f} m</div>
+                    <div class='rc-sub'>Ty: {Ty:.4f} m</div></div>""", unsafe_allow_html=True)
+            with rc4:
+                st.markdown(f"""<div class='rc'><div class='rc-lbl'>ΔZ（標高オフセット）</div>
+                    <div class='rc-val'>{dz_mean:.4f} m</div>
+                    <div class='rc-sub'>RMSE: {rmse:.1f} mm</div></div>""", unsafe_allow_html=True)
+
+            st.markdown("#### 📊 各点の残差")
+            _df_res = pd.DataFrame([{
+                "点名": r["name"],
+                "ΔX (m)": f"{r['dx_mm']/1000:+.4f}",
+                "ΔY (m)": f"{r['dy_mm']/1000:+.4f}",
+                "水平残差 (m)": f"{r['dr_mm']/1000:.4f}",
+                "判定": "✅ 良好" if r["dr_mm"] <= 20 else ("⚠️ 注意" if r["dr_mm"] <= 50 else "❌ 要確認"),
+            } for r in residuals])
+            st.dataframe(_df_res, use_container_width=True, hide_index=True)
+
+            csv_lines_l = [csv_row("パラメータ","値","備考")]
+            csv_lines_l += [
+                csv_row("Scale",         f"{scale:.8f}",    f"ppm: {(scale-1)*1e6:+.3f}"),
+                csv_row("Rotation(deg)", f"{rotation:.6f}", f"秒: {rotation*3600:.3f}"),
+                csv_row("Tx(m)",         f"{Tx:.4f}",       "X平行移動"),
+                csv_row("Ty(m)",         f"{Ty:.4f}",       "Y平行移動"),
+                csv_row("dZ(m)",         f"{dz_mean:.4f}",  "標高オフセット"),
+                csv_row("RMSE(mm)",      f"{rmse:.1f}",     f"使用点数: {n}"),
+                csv_row("","",""),
+                csv_row("点名","ΔX(m)","ΔY(m)","水平残差(m)","判定"),
+            ] + [csv_row(
+                    r["name"],
+                    f"{r['dx_mm']/1000:+.4f}",
+                    f"{r['dy_mm']/1000:+.4f}",
+                    f"{r['dr_mm']/1000:.4f}",
+                    "良好" if r["dr_mm"] <= 20 else ("注意" if r["dr_mm"] <= 50 else "要確認")
+                ) for r in residuals]
+
+            _fn_local = _csv_filename_ui("csv_fn_local", "例: 現場名_ローカライゼーション")
+            st.download_button("📥 パラメータ CSV ダウンロード",
+                "\ufeff" + "\n".join(csv_lines_l),
+                _fn_local or "dummy.csv",
+                "text/csv; charset=utf-8-sig",
+                disabled=(_fn_local is None))
 
 
 # ═══════════════════════════════════════════════════════
