@@ -1632,84 +1632,130 @@ with tab1:
     # ローカライゼーション計算
     # ══════════════════════════════
     elif dir1 == "📐 ローカライゼーション計算":
+        import math as _math
+        import numpy as _np
+
         st.markdown("""
-<div style='background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 16px;margin-bottom:12px;font-size:13px;color:#1e40af'>
-📌 <b>使い方：</b> GNSS測量した基準点の緯度・経度・楕円体高と、対応する現場の既存測量座標（X・Y・Z）を入力してください。<br>
-2点以上でローカライゼーションパラメータを計算します。3点以上で各点の残差も表示します。
+<div style='background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 16px;margin-bottom:10px;font-size:13px;color:#1e40af'>
+📌 <b>入力フォーマット（CSVヘッダーなし）：</b>　点名, 測量X(m), 測量Y(m), 測量Z(m), GNSS緯度, GNSS経度, 楕円体高(m)<br>
+2点以上でScale・Rotation・Tx・Ty・ΔZを算出。3点以上で残差も表示します。
 </div>""", unsafe_allow_html=True)
 
         # ── セッション初期化 ──
+        _lc_empty = {"name":"","sx":"","sy":"","sz":"","lat":"","lon":"","h":""}
         if "pts_local" not in st.session_state:
-            st.session_state["pts_local"] = [
-                {"name":"","lat":"","lon":"","h":"","sx":"","sy":"","sz":""},
-                {"name":"","lat":"","lon":"","h":"","sx":"","sy":"","sz":""},
-            ]
+            st.session_state["pts_local"] = [dict(_lc_empty), dict(_lc_empty)]
+
+        # ── CSV一括インポート ──
+        _lc_up = st.file_uploader("📂 CSV一括インポート（点名,X,Y,Z,緯度,経度,楕円体高）",
+                                   type=["csv","txt"], key="lc_csv_up")
+        if _lc_up is not None:
+            try:
+                import io as _io
+                _lc_text = _lc_up.read().decode("utf-8-sig")
+                _lc_rows = []
+                for _lc_line in _lc_text.splitlines():
+                    _lc_line = _lc_line.strip()
+                    if not _lc_line: continue
+                    _lc_cols = [c.strip() for c in _lc_line.split(",")]
+                    if len(_lc_cols) >= 7:
+                        _lc_rows.append({
+                            "name": _lc_cols[0],
+                            "sx":   _lc_cols[1],
+                            "sy":   _lc_cols[2],
+                            "sz":   _lc_cols[3],
+                            "lat":  _lc_cols[4],
+                            "lon":  _lc_cols[5],
+                            "h":    _lc_cols[6],
+                        })
+                if _lc_rows:
+                    st.session_state["pts_local"] = _lc_rows
+                    st.success(f"✅ {len(_lc_rows)} 点を読み込みました")
+                    st.rerun()
+                else:
+                    st.error("❌ 読み込める行がありません。列数（7列以上）を確認してください。")
+            except Exception as _lc_ex:
+                st.error(f"❌ CSV読み込みエラー: {_lc_ex}")
+
         pts_local = st.session_state["pts_local"]
 
         col_add_l, col_clr_l, _ = st.columns([1, 1, 6])
         with col_add_l:
             if st.button("＋ 点を追加", key="add_local"):
-                pts_local.append({"name":"","lat":"","lon":"","h":"","sx":"","sy":"","sz":""})
+                pts_local.append(dict(_lc_empty))
                 st.rerun()
         with col_clr_l:
             if st.button("🗑 全クリア", key="clr_local"):
-                st.session_state["pts_local"] = [
-                    {"name":"","lat":"","lon":"","h":"","sx":"","sy":"","sz":""},
-                    {"name":"","lat":"","lon":"","h":"","sx":"","sy":"","sz":""},
-                ]
+                st.session_state["pts_local"] = [dict(_lc_empty), dict(_lc_empty)]
                 st.rerun()
 
-        st.markdown("---")
+        # ── ヘッダー行 ──
+        _lc_h1, _lc_h2, _lc_h3, _lc_h4, _lc_h5, _lc_h6, _lc_h7, _lc_hd = st.columns([1.5, 2, 2, 1.5, 2, 2, 1.5, 0.4])
+        for _col, _lbl in zip(
+            [_lc_h1,_lc_h2,_lc_h3,_lc_h4,_lc_h5,_lc_h6,_lc_h7],
+            ["点名","測量X(m)","測量Y(m)","測量Z(m)","GNSS緯度","GNSS経度","楕円体高(m)"]
+        ):
+            _col.markdown(f"<div style='font-size:11px;font-weight:700;color:#374151;padding-bottom:2px'>{_lbl}</div>", unsafe_allow_html=True)
+
         for i, pt in enumerate(pts_local):
-            with st.container():
-                st.markdown(f"<div class='pt-title'>#{i+1} 基準点</div>", unsafe_allow_html=True)
-                ca, cb, cc, cd, ce, cf, cg, cdel = st.columns([1.5, 2, 2, 1.5, 2, 2, 1.5, 0.4])
-                with ca:
-                    pt["name"] = st.text_input("点名", value=pt["name"], key=f"lc_name_{i}", placeholder="BM-1")
-                with cb:
-                    pt["lat"] = st.text_input("GNSS緯度", value=pt["lat"], key=f"lc_lat_{i}", placeholder="35.68123456")
-                with cc:
-                    pt["lon"] = st.text_input("GNSS経度", value=pt["lon"], key=f"lc_lon_{i}", placeholder="139.68123456")
-                with cd:
-                    pt["h"] = st.text_input("楕円体高(m)", value=pt["h"], key=f"lc_h_{i}", placeholder="89.555")
-                with ce:
-                    pt["sx"] = st.text_input("測量X(m)", value=pt["sx"], key=f"lc_sx_{i}", placeholder="現場測量X")
-                with cf:
-                    pt["sy"] = st.text_input("測量Y(m)", value=pt["sy"], key=f"lc_sy_{i}", placeholder="現場測量Y")
-                with cg:
-                    pt["sz"] = st.text_input("測量Z(m)", value=pt["sz"], key=f"lc_sz_{i}", placeholder="現場標高")
-                with cdel:
-                    st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
-                    if len(pts_local) > 2 and st.button("✕", key=f"lc_del_{i}"):
-                        pts_local.pop(i)
-                        st.rerun()
+            ca, cb, cc, cd, ce, cf, cg, cdel = st.columns([1.5, 2, 2, 1.5, 2, 2, 1.5, 0.4])
+            with ca: pt["name"] = st.text_input("点名",      value=pt.get("name",""), key=f"lc_name_{i}", placeholder="BM-1",          label_visibility="collapsed")
+            with cb: pt["sx"]   = st.text_input("測量X",     value=pt.get("sx",""),   key=f"lc_sx_{i}",   placeholder="151940.92",      label_visibility="collapsed")
+            with cc: pt["sy"]   = st.text_input("測量Y",     value=pt.get("sy",""),   key=f"lc_sy_{i}",   placeholder="44023.112",      label_visibility="collapsed")
+            with cd: pt["sz"]   = st.text_input("測量Z",     value=pt.get("sz",""),   key=f"lc_sz_{i}",   placeholder="249.837",        label_visibility="collapsed")
+            with ce: pt["lat"]  = st.text_input("GNSS緯度",  value=pt.get("lat",""),  key=f"lc_lat_{i}",  placeholder="37.36827786",    label_visibility="collapsed")
+            with cf: pt["lon"]  = st.text_input("GNSS経度",  value=pt.get("lon",""),  key=f"lc_lon_{i}",  placeholder="140.33036534",   label_visibility="collapsed")
+            with cg: pt["h"]    = st.text_input("楕円体高",  value=pt.get("h",""),    key=f"lc_h_{i}",    placeholder="292.8286",       label_visibility="collapsed")
+            with cdel:
+                if len(pts_local) > 2 and st.button("✕", key=f"lc_del_{i}"):
+                    pts_local.pop(i); st.rerun()
             st.session_state["pts_local"][i] = pt
 
         st.markdown("---")
 
         if st.button("🔢 ローカライゼーション計算", key="calc_local", type="primary", use_container_width=True):
-            import math as _math
-            import numpy as _np
-
             valid_pts = []
             errors = []
             for i, pt in enumerate(pts_local):
-                name = pt["name"] or f"#{i+1}"
+                name = pt.get("name","").strip() or f"#{i+1}"
                 try:
-                    lat_dd, _ = auto_parse_angle(pt["lat"])
-                    lon_dd, _ = auto_parse_angle(pt["lon"])
-                    h_val  = float(pt["h"]) if pt["h"].strip() else 0.0
-                    sx_val = float(pt["sx"])
-                    sy_val = float(pt["sy"])
-                    sz_val = float(pt["sz"]) if pt["sz"].strip() else None
+                    # 入力値の空白チェック
+                    lat_s = pt.get("lat","").strip()
+                    lon_s = pt.get("lon","").strip()
+                    sx_s  = pt.get("sx","").strip()
+                    sy_s  = pt.get("sy","").strip()
+                    if not lat_s or not lon_s or not sx_s or not sy_s:
+                        errors.append(f"{name}: 必須項目（緯度・経度・測量X・Y）が未入力")
+                        continue
+
+                    # 緯度経度パース（auto_parse_angleは(float, str)タプルを返す）
+                    _parsed_lat = auto_parse_angle(lat_s)
+                    _parsed_lon = auto_parse_angle(lon_s)
+                    lat_dd = float(_parsed_lat[0]) if hasattr(_parsed_lat, "__getitem__") else float(list(_parsed_lat)[0])
+                    lon_dd = float(_parsed_lon[0]) if hasattr(_parsed_lon, "__getitem__") else float(list(_parsed_lon)[0])
+
+                    h_val  = float(pt.get("h","0").strip() or "0")
+                    sx_val = float(sx_s)
+                    sy_val = float(sy_s)
+                    sz_s   = pt.get("sz","").strip()
+                    sz_val = float(sz_s) if sz_s else None
+
                     res = latlon_to_jpc(lat_dd, lon_dd, Z)
                     if res is None:
-                        errors.append(f"{name}: 変換失敗（系番号確認）")
+                        errors.append(f"{name}: 平面直角変換失敗（系番号を確認）")
                         continue
-                    gx, gy = res
+                    gx, gy = float(res[0]), float(res[1])
+
                     N = fetch_geoid(lat_dd, lon_dd, GEOID_KEY)
-                    z_ortho = (h_val - N) if N is not None else h_val
-                    valid_pts.append({"name": name, "gx": gx, "gy": gy, "sx": sx_val, "sy": sy_val, "gz": z_ortho, "sz": sz_val})
+                    N = float(N) if N is not None else 0.0
+                    z_ortho = h_val - N
+
+                    valid_pts.append({
+                        "name": name,
+                        "gx": gx, "gy": gy,
+                        "sx": sx_val, "sy": sy_val,
+                        "gz": z_ortho, "sz": sz_val,
+                    })
                 except Exception as ex:
                     errors.append(f"{name}: {ex}")
 
@@ -1720,7 +1766,6 @@ with tab1:
                 st.warning("⚠️ 有効な基準点が2点以上必要です。")
             else:
                 n = len(valid_pts)
-                # Similarity変換（最小二乗）
                 A = _np.zeros((2*n, 4))
                 L = _np.zeros(2*n)
                 for idx, p in enumerate(valid_pts):
@@ -1729,13 +1774,12 @@ with tab1:
                     L[2*idx]      = p["sx"]
                     L[2*idx+1]    = p["sy"]
                 params, _, _, _ = _np.linalg.lstsq(A, L, rcond=None)
-                a_p, b_p, Tx, Ty = params
+                a_p, b_p, Tx, Ty = float(params[0]), float(params[1]), float(params[2]), float(params[3])
                 scale    = _math.sqrt(a_p**2 + b_p**2)
                 rotation = _math.degrees(_math.atan2(b_p, a_p))
                 z_pairs  = [p for p in valid_pts if p["sz"] is not None]
-                dz_mean  = sum(p["sz"] - p["gz"] for p in z_pairs) / max(len(z_pairs), 1)
+                dz_mean  = sum(p["sz"] - p["gz"] for p in z_pairs) / max(len(z_pairs), 1) if z_pairs else 0.0
 
-                # 残差
                 residuals = []
                 for p in valid_pts:
                     cx = a_p*p["gx"] - b_p*p["gy"] + Tx
@@ -1749,49 +1793,40 @@ with tab1:
                 st.success("✅ 計算完了")
                 rc1, rc2, rc3, rc4 = st.columns(4)
                 with rc1:
-                    st.markdown(f"""<div class='rc'>
-                        <div class='rc-lbl'>SCALE（スケール）</div>
+                    st.markdown(f"""<div class='rc'><div class='rc-lbl'>SCALE（スケール）</div>
                         <div class='rc-val'>{scale:.8f}</div>
-                        <div class='rc-sub'>ppm: {(scale-1)*1e6:+.3f}</div>
-                    </div>""", unsafe_allow_html=True)
+                        <div class='rc-sub'>ppm: {(scale-1)*1e6:+.3f}</div></div>""", unsafe_allow_html=True)
                 with rc2:
-                    st.markdown(f"""<div class='rc'>
-                        <div class='rc-lbl'>ROTATION（回転角）</div>
+                    st.markdown(f"""<div class='rc'><div class='rc-lbl'>ROTATION（回転角）</div>
                         <div class='rc-val'>{rotation:.6f}°</div>
-                        <div class='rc-sub'>{rotation*3600:.3f}″</div>
-                    </div>""", unsafe_allow_html=True)
+                        <div class='rc-sub'>{rotation*3600:.3f}″</div></div>""", unsafe_allow_html=True)
                 with rc3:
-                    st.markdown(f"""<div class='rc'>
-                        <div class='rc-lbl'>Tx（X平行移動）</div>
+                    st.markdown(f"""<div class='rc'><div class='rc-lbl'>Tx（X平行移動）</div>
                         <div class='rc-val'>{Tx:.4f} m</div>
-                        <div class='rc-sub'>Ty: {Ty:.4f} m</div>
-                    </div>""", unsafe_allow_html=True)
+                        <div class='rc-sub'>Ty: {Ty:.4f} m</div></div>""", unsafe_allow_html=True)
                 with rc4:
-                    st.markdown(f"""<div class='rc'>
-                        <div class='rc-lbl'>ΔZ（標高オフセット）</div>
+                    st.markdown(f"""<div class='rc'><div class='rc-lbl'>ΔZ（標高オフセット）</div>
                         <div class='rc-val'>{dz_mean:.4f} m</div>
-                        <div class='rc-sub'>RMSE: {rmse:.1f} mm</div>
-                    </div>""", unsafe_allow_html=True)
+                        <div class='rc-sub'>RMSE: {rmse:.1f} mm</div></div>""", unsafe_allow_html=True)
 
-                if n >= 3:
-                    st.markdown("#### 📊 各点の残差")
-                    _df_res = pd.DataFrame([{
-                        "点名": r["name"],
-                        "ΔX (mm)": f"{r['dx_mm']:+.1f}",
-                        "ΔY (mm)": f"{r['dy_mm']:+.1f}",
-                        "水平残差 (mm)": f"{r['dr_mm']:.1f}",
-                        "判定": "✅ 良好" if r["dr_mm"] < 20 else ("⚠️ 注意" if r["dr_mm"] < 50 else "❌ 要確認"),
-                    } for r in residuals])
-                    st.dataframe(_df_res, use_container_width=True, hide_index=True)
+                st.markdown("#### 📊 各点の残差")
+                _df_res = pd.DataFrame([{
+                    "点名": r["name"],
+                    "ΔX (mm)": f"{r['dx_mm']:+.1f}",
+                    "ΔY (mm)": f"{r['dy_mm']:+.1f}",
+                    "水平残差 (mm)": f"{r['dr_mm']:.1f}",
+                    "判定": "✅ 良好" if r["dr_mm"] < 20 else ("⚠️ 注意" if r["dr_mm"] < 50 else "❌ 要確認"),
+                } for r in residuals])
+                st.dataframe(_df_res, use_container_width=True, hide_index=True)
 
                 csv_lines_l = [csv_row("パラメータ","値","備考")]
                 csv_lines_l += [
-                    csv_row("Scale",          f"{scale:.8f}",    f"ppm: {(scale-1)*1e6:+.3f}"),
-                    csv_row("Rotation(deg)",  f"{rotation:.6f}", f"秒: {rotation*3600:.3f}"),
-                    csv_row("Tx(m)",          f"{Tx:.4f}",       "X平行移動"),
-                    csv_row("Ty(m)",          f"{Ty:.4f}",       "Y平行移動"),
-                    csv_row("dZ(m)",          f"{dz_mean:.4f}",  "標高オフセット"),
-                    csv_row("RMSE(mm)",       f"{rmse:.1f}",     f"使用点数: {n}"),
+                    csv_row("Scale",         f"{scale:.8f}",    f"ppm: {(scale-1)*1e6:+.3f}"),
+                    csv_row("Rotation(deg)", f"{rotation:.6f}", f"秒: {rotation*3600:.3f}"),
+                    csv_row("Tx(m)",         f"{Tx:.4f}",       "X平行移動"),
+                    csv_row("Ty(m)",         f"{Ty:.4f}",       "Y平行移動"),
+                    csv_row("dZ(m)",         f"{dz_mean:.4f}",  "標高オフセット"),
+                    csv_row("RMSE(mm)",      f"{rmse:.1f}",     f"使用点数: {n}"),
                     csv_row("","",""),
                     csv_row("点名","ΔX(mm)","ΔY(mm)","水平残差(mm)"),
                 ] + [csv_row(r["name"], f"{r['dx_mm']:+.1f}", f"{r['dy_mm']:+.1f}", f"{r['dr_mm']:.1f}") for r in residuals]
