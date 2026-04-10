@@ -1731,10 +1731,45 @@ with tab1:
         if st.button("🔢 ローカライゼーション計算", key="calc_local", type="primary", use_container_width=True):
             valid_pts = []
             errors = []
+
+            # キャッシュ付き関数を避けて純粋計算関数を直接定義
+            def _ll2jpc(lat_deg, lon_deg, zone):
+                if zone not in JPC_ORIGINS: return None
+                la0, lo0 = JPC_ORIGINS[zone]
+                phi = lat_deg * DEG; lam = lon_deg * DEG
+                phi0 = la0 * DEG;    lam0 = lo0 * DEG
+                sinP = _math.sin(phi)
+                psi  = _math.atanh(sinP) - _e * _math.atanh(_e * sinP)
+                dl   = lam - lam0
+                xi_  = _math.atan2(_math.sinh(psi), _math.cos(dl))
+                eta_ = _math.atanh(_math.sin(dl) / _math.cosh(psi))
+                xi   = xi_  + sum(_alpha[j]*_math.sin(2*j*xi_) *_math.cosh(2*j*eta_) for j in range(1,5))
+                eta  = eta_ + sum(_alpha[j]*_math.cos(2*j*xi_) *_math.sinh(2*j*eta_) for j in range(1,5))
+                return _m0*_A*xi - _S(phi0), _m0*_A*eta
+
+            def _parse_ll(s):
+                """文字列→十進角度 (float)"""
+                s = s.strip()
+                # 度分秒記号
+                if any(c in s for c in ("°","′","″")):
+                    import re as _re
+                    m = _re.match(r'(-?\d+)[°]\s*(\d+)[′]\s*([\d.]+)', s)
+                    if m:
+                        sg = -1 if float(m.group(1)) < 0 else 1
+                        return sg*(abs(float(m.group(1)))+float(m.group(2))/60+float(m.group(3))/3600)
+                # N/S prefix
+                if s[0] in 'NnSs':
+                    import re as _re
+                    m = _re.match(r'([NSns])\s*(\d+)[°]?\s*(\d+)[′]?\s*([\d.]+)', s)
+                    if m:
+                        v = float(m.group(2))+float(m.group(3))/60+float(m.group(4))/3600
+                        return v if s[0] in 'Nn' else -v
+                # 純数値
+                return float(s.replace("°",""))
+
             for i, pt in enumerate(pts_local):
                 name = pt.get("name","").strip() or f"#{i+1}"
                 try:
-                    # 入力値の空白チェック
                     lat_s = pt.get("lat","").strip()
                     lon_s = pt.get("lon","").strip()
                     sx_s  = pt.get("sx","").strip()
@@ -1743,27 +1778,27 @@ with tab1:
                         errors.append(f"{name}: 必須項目（緯度・経度・測量X・Y）が未入力")
                         continue
 
-                    # 緯度経度パース（auto_parse_angleは(float, str)タプルを返す）
-                    _parsed_lat = auto_parse_angle(lat_s)
-                    _parsed_lon = auto_parse_angle(lon_s)
-                    lat_dd = float(_parsed_lat[0]) if hasattr(_parsed_lat, "__getitem__") else float(list(_parsed_lat)[0])
-                    lon_dd = float(_parsed_lon[0]) if hasattr(_parsed_lon, "__getitem__") else float(list(_parsed_lon)[0])
-
+                    lat_dd = _parse_ll(lat_s)
+                    lon_dd = _parse_ll(lon_s)
                     h_val  = float(pt.get("h","0").strip() or "0")
                     sx_val = float(sx_s)
                     sy_val = float(sy_s)
                     sz_s   = pt.get("sz","").strip()
                     sz_val = float(sz_s) if sz_s else None
 
-                    res = latlon_to_jpc(lat_dd, lon_dd, Z)
+                    res = _ll2jpc(lat_dd, lon_dd, Z)
                     if res is None:
                         errors.append(f"{name}: 平面直角変換失敗（系番号を確認）")
                         continue
                     gx, gy = float(res[0]), float(res[1])
 
-                    N = fetch_geoid(lat_dd, lon_dd, GEOID_KEY)
-                    N = float(N) if N is not None else 0.0
-                    z_ortho = h_val - N
+                    # ジオイド高（APIキャッシュ版を使用・結果をfloatに強制）
+                    try:
+                        _N = fetch_geoid(lat_dd, lon_dd, GEOID_KEY)
+                        N_val = float(_N) if _N is not None else 0.0
+                    except Exception:
+                        N_val = 0.0
+                    z_ortho = h_val - N_val
 
                     valid_pts.append({
                         "name": name,
